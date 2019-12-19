@@ -1,0 +1,36 @@
+---
+title: "mcHousingCodeViolations"
+author: "Steve Dutky MC Data110 Fall 2019"
+date: "12/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### import libraries
+```{r}
+library(tidyverse)
+```
+
+# import mc Housing Code Violations dataset
+
+
+```{r}
+hcv<-read_csv(url("https://data.montgomerycountymd.gov/resource/k9nj-z35d.csv"))
+```
+
+```{r}
+names(hcv)
+```
+```{r}
+freqViolations<-table(hcv$code_reference)
+freqViolations<-tibble(
+  code=names(freqViolations),
+  frequency=as.numeric(freqViolations)
+) %>%
+  arrange(desc(frequency))
+```
+
