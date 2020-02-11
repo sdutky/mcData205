@@ -131,7 +131,7 @@ pander(tSummary(df[,cols])[stats])
 *    Select gender male/female
 *    Select for localities where pooled-pooled income fraction exceeds .5
 
-#### Possible visualations
+#### Possible visualizations
 *    Scatter plot count vs incarceration rates shapes for race/gender
 *    Scatter plot count vs income fraction shapes for race/gender
 *    Bar graphs for income/incarceration aggregated by state stacked by race and gender
@@ -231,7 +231,7 @@ pander(tSummary(df[,cols])[stats])
 *   Institution prestige
 *   Institution type and iclevel (see above)
 
-#### Possible visualations
+#### Possible visualizations
 *   Scatter plot of parent vs child income rank colored by institution prestige
 *   Scatter plot of cohort count vs child income rank colored by institution prestige
 *   Stacked bar chart of institution prestige (horizontal) vs cohort counts by type and iclevel
@@ -322,7 +322,8 @@ pander(tSummary(df[,cols])[stats])
 
 #### Relevant Filters
 *   sum(abs(shareSY1-shareSY2) > threshold for all S
-#### Possible visualations
+
+#### Possible visualizations
 *   Stacked bar chart of counties in commuting zones sized by share column of selected year and ordered by mean population density across commuting zone. Many interesting columns.
 *   Paired stacked bar chart of all shares of paired years y1,y2 in same county ordered by sum of absolute share difference y2-y1.
 
