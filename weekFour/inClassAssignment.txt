@@ -1,0 +1,5 @@
+1.  Create 3-5 visualizations for each of your dataMontgomery datasets using Socrata (the visualization tool in dataMontgomery).
+
+create different visualization types
+create interesting visuals
+2.  Upload a slideshow of your visualizations to this page.
