@@ -1,0 +1,321 @@
+---
+title: "hyperlinked template"
+author: "Steve Dutky Montgomery College"
+date: "2/18/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### **Herein:** {#sddSection0}
+*   **[Section 1](#sddSection1)**
+*   **[Section 2](#sddSection2)**
+*   **[Section 3](#sddSection3)**
+*   **[Section 4](#sddSection4)**
+*   **[Section 5](#sddSection5)**
+*   **[Section 6](#sddSection6)**
+*   **[Section 7](#sddSection7)**
+*   **[Section 8](#sddSection8)**
+*   **[Section 9](#sddSection9)**
+*   **[Section 10](#sddSection10)**
+*   **[Section 11](#sddSection11)**
+*   **[Section 12](#sddSection12)**
+*   **[Section 13](#sddSection13)**
+*   **[Section 14](#sddSection14)**
+*   **[Section 15](#sddSection15)**
+*   **[Section 16](#sddSection16)**
+*   **[Section 17](#sddSection17)**
+*   **[Section 18](#sddSection18)**
+*   **[Section 19](#sddSection19)**
+*   **[Section 20](#sddSection20)**
+*   **[Section 21](#sddSection21)**
+*   **[Section 22](#sddSection22)**
+*   **[Section 23](#sddSection23)**
+*   **[Section 24](#sddSection24)**
+*   **[Section 25](#sddSection25)**
+*   **[Section 26](#sddSection26)**
+*   **[Section 27](#sddSection27)**
+*   **[Section 28](#sddSection28)**
+*   **[Section 29](#sddSection29)**
+*   **[Section 30](#sddSection30)**
+*   **[Section 31](#sddSection31)**
+*   **[Section 32](#sddSection32)**
+*   **[Section 33](#sddSection33)**
+*   **[Section 34](#sddSection34)**
+*   **[Section 35](#sddSection35)**
+*   **[Section 36](#sddSection36)**
+*   **[Section 37](#sddSection37)**
+*   **[Section 38](#sddSection38)**
+*   **[Section 39](#sddSection39)**
+*   **[Section 40](#sddSection40)**
+*   **[Section 41](#sddSection41)**
+*   **[Section 42](#sddSection42)**
+*   **[Section 43](#sddSection43)**
+*   **[Section 44](#sddSection44)**
+*   **[Section 45](#sddSection45)**
+*   **[Section 46](#sddSection46)**
+*   **[Section 47](#sddSection47)**
+*   **[Section 48](#sddSection48)**
+*   **[Section 49](#sddSection49)**
+*   **[Section 50](#sddSection50)**
+
+******
+
+### **Section 1** {#sddSection1}
+[{previous}](#sddSection0)|[{toc}](#sddSection0)|[{next}](#sddSection2)
+---------------|------------|----------
+<br>
+
+<center>
+![](https://github.com/sdutky/mcData205/raw/master/weekThree/hcv2019ItemCitations.png)
+Violation Items resulting in citations in 2019
+</center>
+******
+
+### **Section 2** {#sddSection2}
+[{previous}](#sddSection1)|[{toc}](#sddSection0)|[{next}](#sddSection3)
+---------------|------------|----------
+<br>
+
+### **Section 3** {#sddSection3}
+[{previous}](#sddSection2)|[{toc}](#sddSection0)|[{next}](#sddSection4)
+---------------|------------|----------
+<br>
+
+### **Section 4** {#sddSection4}
+[{previous}](#sddSection3)|[{toc}](#sddSection0)|[{next}](#sddSection5)
+---------------|------------|----------
+<br>
+
+### **Section 5** {#sddSection5}
+[{previous}](#sddSection4)|[{toc}](#sddSection0)|[{next}](#sddSection6)
+---------------|------------|----------
+<br>
+
+### **Section 6** {#sddSection6}
+[{previous}](#sddSection5)|[{toc}](#sddSection0)|[{next}](#sddSection7)
+---------------|------------|----------
+<br>
+
+### **Section 7** {#sddSection7}
+[{previous}](#sddSection6)|[{toc}](#sddSection0)|[{next}](#sddSection8)
+---------------|------------|----------
+<br>
+
+### **Section 8** {#sddSection8}
+[{previous}](#sddSection7)|[{toc}](#sddSection0)|[{next}](#sddSection9)
+---------------|------------|----------
+<br>
+
+### **Section 9** {#sddSection9}
+[{previous}](#sddSection8)|[{toc}](#sddSection0)|[{next}](#sddSection10)
+---------------|------------|----------
+<br>
+
+### **Section 10** {#sddSection10}
+[{previous}](#sddSection9)|[{toc}](#sddSection0)|[{next}](#sddSection11)
+---------------|------------|----------
+<br>
+
+### **Section 11** {#sddSection11}
+[{previous}](#sddSection10)|[{toc}](#sddSection0)|[{next}](#sddSection12)
+---------------|------------|----------
+<br>
+
+### **Section 12** {#sddSection12}
+[{previous}](#sddSection11)|[{toc}](#sddSection0)|[{next}](#sddSection13)
+---------------|------------|----------
+<br>
+
+### **Section 13** {#sddSection13}
+[{previous}](#sddSection12)|[{toc}](#sddSection0)|[{next}](#sddSection14)
+---------------|------------|----------
+<br>
+
+### **Section 14** {#sddSection14}
+[{previous}](#sddSection13)|[{toc}](#sddSection0)|[{next}](#sddSection15)
+---------------|------------|----------
+<br>
+
+### **Section 15** {#sddSection15}
+[{previous}](#sddSection14)|[{toc}](#sddSection0)|[{next}](#sddSection16)
+---------------|------------|----------
+<br>
+
+### **Section 16** {#sddSection16}
+[{previous}](#sddSection15)|[{toc}](#sddSection0)|[{next}](#sddSection17)
+---------------|------------|----------
+<br>
+
+### **Section 17** {#sddSection17}
+[{previous}](#sddSection16)|[{toc}](#sddSection0)|[{next}](#sddSection18)
+---------------|------------|----------
+<br>
+
+### **Section 18** {#sddSection18}
+[{previous}](#sddSection17)|[{toc}](#sddSection0)|[{next}](#sddSection19)
+---------------|------------|----------
+<br>
+
+### **Section 19** {#sddSection19}
+[{previous}](#sddSection18)|[{toc}](#sddSection0)|[{next}](#sddSection20)
+---------------|------------|----------
+<br>
+
+### **Section 20** {#sddSection20}
+[{previous}](#sddSection19)|[{toc}](#sddSection0)|[{next}](#sddSection21)
+---------------|------------|----------
+<br>
+
+### **Section 21** {#sddSection21}
+[{previous}](#sddSection20)|[{toc}](#sddSection0)|[{next}](#sddSection22)
+---------------|------------|----------
+<br>
+
+### **Section 22** {#sddSection22}
+[{previous}](#sddSection21)|[{toc}](#sddSection0)|[{next}](#sddSection23)
+---------------|------------|----------
+<br>
+
+### **Section 23** {#sddSection23}
+[{previous}](#sddSection22)|[{toc}](#sddSection0)|[{next}](#sddSection24)
+---------------|------------|----------
+<br>
+
+### **Section 24** {#sddSection24}
+[{previous}](#sddSection23)|[{toc}](#sddSection0)|[{next}](#sddSection25)
+---------------|------------|----------
+<br>
+
+### **Section 25** {#sddSection25}
+[{previous}](#sddSection24)|[{toc}](#sddSection0)|[{next}](#sddSection26)
+---------------|------------|----------
+<br>
+
+### **Section 26** {#sddSection26}
+[{previous}](#sddSection25)|[{toc}](#sddSection0)|[{next}](#sddSection27)
+---------------|------------|----------
+<br>
+
+### **Section 27** {#sddSection27}
+[{previous}](#sddSection26)|[{toc}](#sddSection0)|[{next}](#sddSection28)
+---------------|------------|----------
+<br>
+
+### **Section 28** {#sddSection28}
+[{previous}](#sddSection27)|[{toc}](#sddSection0)|[{next}](#sddSection29)
+---------------|------------|----------
+<br>
+
+### **Section 29** {#sddSection29}
+[{previous}](#sddSection28)|[{toc}](#sddSection0)|[{next}](#sddSection30)
+---------------|------------|----------
+<br>
+
+### **Section 30** {#sddSection30}
+[{previous}](#sddSection29)|[{toc}](#sddSection0)|[{next}](#sddSection31)
+---------------|------------|----------
+<br>
+
+### **Section 31** {#sddSection31}
+[{previous}](#sddSection30)|[{toc}](#sddSection0)|[{next}](#sddSection32)
+---------------|------------|----------
+<br>
+
+### **Section 32** {#sddSection32}
+[{previous}](#sddSection31)|[{toc}](#sddSection0)|[{next}](#sddSection33)
+---------------|------------|----------
+<br>
+
+### **Section 33** {#sddSection33}
+[{previous}](#sddSection32)|[{toc}](#sddSection0)|[{next}](#sddSection34)
+---------------|------------|----------
+<br>
+
+### **Section 34** {#sddSection34}
+[{previous}](#sddSection33)|[{toc}](#sddSection0)|[{next}](#sddSection35)
+---------------|------------|----------
+<br>
+
+### **Section 35** {#sddSection35}
+[{previous}](#sddSection34)|[{toc}](#sddSection0)|[{next}](#sddSection36)
+---------------|------------|----------
+<br>
+
+### **Section 36** {#sddSection36}
+[{previous}](#sddSection35)|[{toc}](#sddSection0)|[{next}](#sddSection37)
+---------------|------------|----------
+<br>
+
+### **Section 37** {#sddSection37}
+[{previous}](#sddSection36)|[{toc}](#sddSection0)|[{next}](#sddSection38)
+---------------|------------|----------
+<br>
+
+### **Section 38** {#sddSection38}
+[{previous}](#sddSection37)|[{toc}](#sddSection0)|[{next}](#sddSection39)
+---------------|------------|----------
+<br>
+
+### **Section 39** {#sddSection39}
+[{previous}](#sddSection38)|[{toc}](#sddSection0)|[{next}](#sddSection40)
+---------------|------------|----------
+<br>
+
+### **Section 40** {#sddSection40}
+[{previous}](#sddSection39)|[{toc}](#sddSection0)|[{next}](#sddSection41)
+---------------|------------|----------
+<br>
+
+### **Section 41** {#sddSection41}
+[{previous}](#sddSection40)|[{toc}](#sddSection0)|[{next}](#sddSection42)
+---------------|------------|----------
+<br>
+
+### **Section 42** {#sddSection42}
+[{previous}](#sddSection41)|[{toc}](#sddSection0)|[{next}](#sddSection43)
+---------------|------------|----------
+<br>
+
+### **Section 43** {#sddSection43}
+[{previous}](#sddSection42)|[{toc}](#sddSection0)|[{next}](#sddSection44)
+---------------|------------|----------
+<br>
+
+### **Section 44** {#sddSection44}
+[{previous}](#sddSection43)|[{toc}](#sddSection0)|[{next}](#sddSection45)
+---------------|------------|----------
+<br>
+
+### **Section 45** {#sddSection45}
+[{previous}](#sddSection44)|[{toc}](#sddSection0)|[{next}](#sddSection46)
+---------------|------------|----------
+<br>
+
+### **Section 46** {#sddSection46}
+[{previous}](#sddSection45)|[{toc}](#sddSection0)|[{next}](#sddSection47)
+---------------|------------|----------
+<br>
+
+### **Section 47** {#sddSection47}
+[{previous}](#sddSection46)|[{toc}](#sddSection0)|[{next}](#sddSection48)
+---------------|------------|----------
+<br>
+
+### **Section 48** {#sddSection48}
+[{previous}](#sddSection47)|[{toc}](#sddSection0)|[{next}](#sddSection49)
+---------------|------------|----------
+<br>
+
+### **Section 49** {#sddSection49}
+[{previous}](#sddSection48)|[{toc}](#sddSection0)|[{next}](#sddSection50)
+---------------|------------|----------
+<br>
+
+### **Section 50** {#sddSection50}
+[{previous}](#sddSection49)|[{toc}](#sddSection0)|
+---------------|------------|----------
+<br>
+
