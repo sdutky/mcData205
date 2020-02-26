@@ -1,0 +1,179 @@
+---
+title: "mcHcvVisualizations"
+author: "Steve Dutky Montgomery College"
+date: "2/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# import libraries
+library(tidyverse)
+library(lubridate)
+library(bizdays)
+library(pander)
+library(Hmisc)
+```
+
+```{r}
+# useful functions
+ g<-function(pat,vec,v="v") {
+ if (v=="v") a<-grep(pat,vec,value = TRUE)
+ if (v=="i") a<-grep(pat,vec)
+ if (v=="l") a<-grepl(pat,vec)
+ a
+ }
+```
+
+
+```{r}
+# get datafile
+load("mcHousingCodeViolations.RData")
+```
+```{r}
+# check columns for na's
+a<-as.data.frame(sapply(names(hcv),FUN=function(a) is.na(hcv[,a])))
+pander(tSummary(a))
+```
+```{r}
+# get mc311 requests assigned to HCA, Code Enforcement
+mc311<-read_csv("mc311HcaCode.csv")
+names(mc311)<-c(
+    "srId","dateOpened","dateClosed","status","department",
+    "area","subArea","attachedSolutionTopic","attachedSolutionSlaDays",
+    "city","state","zipCode","source","electionDistrict",
+    "marylandStateDistrict","congressionalDistrict",
+    "congressionalMember","councilDistrict","councilMemberName",
+    "dateChanged","DaysOpen","withinSlaWindows","slaYes","slaNo"
+    )
+#
+# check NA's
+a<-as.data.frame(sapply(names(mc311),FUN=function(a) is.na(mc311[,a])))
+pander(tSummary(a))
+```
+
+
+```{r eval=FALSE}
+hcv<-hcv %>%
+  mutate(dServiceRequest=as.numeric((serviceRequestClosedTime-serviceRequestCreatedDate),units="days")) %>%
+  mutate(dFiled=as.numeric((dateFiled-serviceRequestCreatedDate),units="days")) %>%
+  mutate(dAssigned=as.numeric((dateAssigned-serviceRequestCreatedDate),units="days")) %>%
+  mutate(dInspected=as.numeric((inspectionDate-serviceRequestCreatedDate),units="days")) %>%
+  mutate(dInspected=as.numeric((inspectionDate-serviceRequestCreatedDate),units="days")) %>%
+  mutate(dClosed=as.numeric((dateClosed-serviceRequestCreatedDate),units="days"))
+```
+
+```{r}
+# prep for joining to hcv
+
+join311 <- mc311 %>%
+  filter(status=="Closed") %>%
+  mutate(serviceRequestNumber=as.character(srId)) %>%
+  mutate(dateSrOpened=parse_date_time(dateOpened,"mdy I:M:S p",tz="EST")) %>%
+  mutate(dateSrClosed=parse_date_time(dateClosed,"mdy I:M:S p",tz="EST")) %>%
+  mutate(slaMet=withinSlaWindows=="Yes") %>%
+  select(serviceRequestNumber,dateSrOpened,dateSrClosed,attachedSolutionTopic,attachedSolutionSlaDays,slaMet)
+
+```
+
+```{r}
+# perform join
+
+ij<- hcv %>% 
+  mutate(serviceRequestNumber=as.character(serviceRequestNumber)) %>%
+  inner_join(join311)
+```
+
+
+```{r eval=FALSE}
+# find minimal distinct subset
+dups<-qw(" caseNumber violationID  serviceRequestNumber ")
+rest<-unlist( sapply(names(ij) ,FUN=function(a) if (!(a %in% dups)) a))
+
+for ( i in rest ) {
+  dups<-c(dups,i)
+  a<-duplicated(ij[,dups])
+  print(paste(sum(rep(1,length(a))[a]),paste(dups, collapse=" "),collapse=" "))
+}
+```
+```{r}
+#violin plot of inspection/day of week
+years<-2014:2019
+days<-qw("Monday Tuesday Wednesday Thursday Friday")
+dayOfWeek<- ij %>%
+        select(caseNumber,inspectionDate) %>%
+        distinct() %>%
+        mutate(day=weekdays(inspectionDate)) %>%
+        mutate(year=as.character(year(inspectionDate))) %>%
+        filter(year %in% years, day %in% days) %>%
+        mutate(day=factor(day,levels = days)) %>%
+        select(day, year) %>%
+        group_by(day,year)  
+
+        p<-ggplot(dayOfWeek,aes(day,fill=year)) +
+        scale_color_brewer()+
+#        geom_histogram(stat="count",position="stack")
+        geom_histogram(stat="count",color="black",position = "dodge2")+
+        ggtitle("Housing Code Violations: Inspections by Day of Week")
+        
+        p
+```
+
+
+```{r}
+
+#violin plot of inspection/day of week
+years<-2014:2019
+violationsPerCase <- ij %>%
+        select(caseNumber,violationID,inspectionDate) %>%
+        distinct() %>%
+        mutate(year=as.character(year(inspectionDate))) %>%
+        filter(year %in% years) %>%
+        group_by(caseNumber,year)  %>%
+        summarise(count=n())
+threshold<-mean(violationsPerCase$count)+6*sd(violationsPerCase$count)
+
+p<-violationsPerCase %>% #filter(count<threshold) %>%
+  # mutate(count=log10(count)) %>%
+  ggplot(aes(year,count))+
+  scale_color_brewer()+
+  geom_violin(aes(fill=year)) +
+  scale_y_continuous(trans="log10")+
+  annotation_logticks(sides = "l")+
+  #stat_summary(fun.data=mean_sdl, mult=1,  geom="pointrange", color="black")+
+  geom_boxplot(width=0.1)+
+  ggtitle("Housing Code Violations: violations per inspection")+
+  theme(legend.position = "none")
+
+p
+```
+
+```{r}
+
+#violin plot of inspection/day of week
+years<-2014:2019
+deltaDaysFilingInspection <- ij %>%
+        select(caseNumber,violationID,dateFiled,inspectionDate) %>%
+        distinct() %>%
+        mutate(year=as.character(year(inspectionDate))) %>%
+        mutate(days=bizdays(dateFiled,inspectionDate)+1) %>%
+        filter(year %in% years,days>0) %>%
+        group_by(caseNumber,year,days)  %>%
+        summarise(violations=cut(n(),c(1,5,10,20,30,Inf))) %>%
+        drop_na()
+
+p<-deltaDaysFilingInspection %>% #filter(count<threshold) %>%
+  ggplot(aes(year,days))+
+  scale_color_brewer()+
+  geom_violin(aes(fill=violations),position="dodge",draw_quantiles = c(0.25,0.5,0.75)) +
+  scale_y_continuous(trans="log10")+
+  annotation_logticks(sides = "l")+
+  #stat_summary(fun.data=mean_sdl, mult=1,  geom="pointrange", color="black")+
+  ggtitle("Housing Code Violations: days until inspection")
+
+p
+```
+
