@@ -25,55 +25,17 @@ load("projectProgress.Rdata")
 
 ### **Herein:** {#sddSection0}
 *   **[Progress Summary](#sddSection1)**
-*   **[Section 2](#sddSection2)**
-*   **[Section 3](#sddSection3)**
-*   **[Section 4](#sddSection4)**
-*   **[Section 5](#sddSection5)**
-*   **[Section 6](#sddSection6)**
-*   **[Section 7](#sddSection7)**
-*   **[Section 8](#sddSection8)**
-*   **[Section 9](#sddSection9)**
-*   **[Section 10](#sddSection10)**
-*   **[Section 11](#sddSection11)**
-*   **[Section 12](#sddSection12)**
-*   **[Section 13](#sddSection13)**
-*   **[Section 14](#sddSection14)**
-*   **[Section 15](#sddSection15)**
-*   **[Section 16](#sddSection16)**
-*   **[Section 17](#sddSection17)**
-*   **[Section 18](#sddSection18)**
-*   **[Section 19](#sddSection19)**
-*   **[Section 20](#sddSection20)**
-*   **[Section 21](#sddSection21)**
-*   **[Section 22](#sddSection22)**
-*   **[Section 23](#sddSection23)**
-*   **[Section 24](#sddSection24)**
-*   **[Section 25](#sddSection25)**
-*   **[Section 26](#sddSection26)**
-*   **[Section 27](#sddSection27)**
-*   **[Section 28](#sddSection28)**
-*   **[Section 29](#sddSection29)**
-*   **[Section 30](#sddSection30)**
-*   **[Section 31](#sddSection31)**
-*   **[Section 32](#sddSection32)**
-*   **[Section 33](#sddSection33)**
-*   **[Section 34](#sddSection34)**
-*   **[Section 35](#sddSection35)**
-*   **[Section 36](#sddSection36)**
-*   **[Section 37](#sddSection37)**
-*   **[Section 38](#sddSection38)**
-*   **[Section 39](#sddSection39)**
-*   **[Section 40](#sddSection40)**
-*   **[Section 41](#sddSection41)**
-*   **[Section 42](#sddSection42)**
-*   **[Section 43](#sddSection43)**
-*   **[Section 44](#sddSection44)**
-*   **[Section 45](#sddSection45)**
-*   **[Section 46](#sddSection46)**
-*   **[Section 47](#sddSection47)**
-*   **[Section 48](#sddSection48)**
-*   **[Section 49](#sddSection49)**
-*   **[Section 50](#sddSection50)**
+*   **[Revised Statistics](#sddSection2)**
+*   **[Categories of Code Infractions and Severity](#sddSection3)**
+*   **[Cleaning and Summary of the HCV Data Set](#sddSection4)**
+*   **[Cleaning and Summary of the mcRentalsPp Data Set](#sddSection5)**
+*   **[Summary of the mcPp Data Set](#sddSection6)**
+*   **[Summary of the mc311hca Data Set](#sddSection7)**
+*   **[Visualizations: Alluvial Plots Overview](#sddSection8)**
+*   **[Visualizations: Alluvial Plots by Date and Distance](#sddSection8a)**
+*   **[Visualizations: Alluvial Plots by Habitability and Safety](#sddSection8b)**
+*   **[Data Sources](#sddSection9)**
+*   **[Rmd Code](#sddSection10)**
 
 ******
 
@@ -92,7 +54,7 @@ load("projectProgress.Rdata")
 
 *  I have assigned geocoordinates where the HCV had none. Using these geocoordinates, I associated each violation to a U.S. Census Block group.
 
-*  Working from the County Code, I have constructed a data set that categorizes code references and assigns to a severity code of 1-5 and joined these to the HCV.
+*  Working from the County Code, I have constructed a data set that categorizes code references and assigns to a severity code of 1-5 (5 is most severe) and joined these to the HCV.
 
 *  I have culled rental properties (mcRentalPp) from the Maryland Parcel Points data set (mcPp).
 
@@ -109,18 +71,12 @@ load("projectProgress.Rdata")
 *  Identify a story that can be told from the data. Illustrate it with alluvial plots or animated geospatial plots.
 
 
-<center>
-![](https://github.com/sdutky/mcData205/raw/master/weekThree/hcv2019ItemCitations.png)
-Violation Items resulting in citations in 2019
-</center>
-******
-
 ### **Revised Statistics** {#sddSection2}
 [{previous}](#sddSection1)|[{toc}](#sddSection0)|[{next}](#sddSection3)
 ---------------|------------|----------
 <br>
 
-These were included in the Project Plan.  Since cleaning:
+>  These were included in the Project Plan.  Since cleaning:
 <br><center> **Summary of Residential Rental Properties in Montgomery County**
 ```{r}
 
@@ -144,7 +100,7 @@ pander(cn311)
 
 >  This is my take summarizing the County's Housing Code collapsing the sixty six infractions into twelve categories. This is still to many to render in a plot so I squeezed these down to classes: safety, security, habitability, and compliance:
 <br>
-<center>**Summary of Housing Code Infractions**</center>
+<center>**Summary of Housing Code [Infractions](http://montgomeryco-md.elaws.us/code/coor_ptii)**</center>
 
 ```{r}
 a<-codeReferencesCategoriesSeverity
@@ -153,18 +109,18 @@ names(a)<-c("code","freq","collator","descr","category","severity","class")
 pander(a %>%
          select(freq,category,severity,code,descr) %>%
          mutate(descr=substr(descr,1,30)) %>%
-         arrange(category)
+         arrange(category,desc(freq))
 )
 ```
 
-### **Cleaning and Summary of HCV dataset** {#sddSection4}
+### **Cleaning and Summary of the HCV Data Set** {#sddSection4}
 [{previous}](#sddSection3)|[{toc}](#sddSection0)|[{next}](#sddSection5)
 ---------------|------------|----------
 <br>
 
-> The cleaning of HCV entailed dropping rows where there was either no cited violation or the disposition indicated that no violations were found. There were approximately 2000 rows where both longitude and latitude were zero.  For these I constructed a lower case mailing address containing no double spaces and no punctuation other than space.  Using the geocode function of the tidycoder library the addresses were matched against the U.S. Census TIGER/LINE database first, and, if that failed to return geocoordinates, Open Street Map. This succeeded except for fewer that 100 rows which were dropped.
+> The cleaning of the HCV data set entailed dropping rows where there was either no cited violation or the disposition indicated that no violations were found. There were approximately 2000 rows where both longitude and latitude were zero.  For these I constructed a lower case mailing address containing no double spaces and no punctuation other than space.  Using the geocode function of the [tidycoder library](https://cran.r-project.org/web/packages/tidygeocoder/vignettes/tidygeocoder.html) the addresses were matched against the [U.S. Census TIGER/Line database](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-geodatabase-file.html) first, and, if that failed to return geocoordinates, [Open Street Map](https://www.openstreetmap.org/about). This succeeded except for fewer than 100 rows which were dropped.
 
->  Using the sp and sf geospatial libraries and the arcGis shape file from Data Montgomery of the County's census block groups, the geocoordinates of only 279 violations failed to match a census block group.  The block group will allow the underlying conditions discernable from mcPp and the U.S. Census 2018 American Community Survey to be paired with each row in the HCV.
+>  Using the [sp and sf geospatial libraries](https://cran.r-project.org/web/packages/sf/vignettes/sf1.html) and the arcGis shape file from Data Montgomery of the County's census block groups, the geocoordinates of only 279 violations failed to match a census block group.  The block group will allow the underlying conditions discernable from the mcPp data set and the U.S. Census 2018 American Community Survey to be paired with each row in the HCV.
 
 <br><center> **Hmisc describe output:** </center>
 
@@ -183,7 +139,7 @@ html(desc_hcv)
 >  The mcRentalsPp data set was intended to contain all of the current rental properties in Montgomery County isolated from mcPp, the Maryland Parcel Points data set filtered to Montgomery County.  I first thought I could filter for properties flagged as residential in the 2010 census (resi2010=="0") that were not owner occupied.  This left in a variety of parking spaces, lots, and graveyards.  Extending the filter to exclude properties without street addresses and allow only specific Land Use and Building description produced more reasonable results.
 
 
-```{r eval=FALSE}
+```{r eval=FALSE,echo=TRUE}
  filter(resi2010=="0",
              !is.na(streetNam),
              ownerOccupancy=="N",
@@ -220,7 +176,7 @@ html(desc_mcRentalsPp)
 ---------------|------------|----------
 <br>
 
->  Again this is sourced from the Maryland Parcel Point data set filtered for Montgomery County and puportedly contains all properties in Montgomery County.
+>  Again this is sourced from the Maryland Parcel Point data set filtered for Montgomery County and puportedly contains all properties in Montgomery County. At this point, it was used as is as the source for the mcRentalsPp data set.  Subsequently it will be cleaned and used to provide context to all properties within each census block group.
 
 ```{r}
 
@@ -229,12 +185,12 @@ html(desc_mcPP)
 ```
 
 
-### **Summary of the mc311hca** {#sddSection7}
+### **Summary of the mc311hca Data Set** {#sddSection7}
 [{previous}](#sddSection6)|[{toc}](#sddSection0)|[{next}](#sddSection8)
 ---------------|------------|----------
 <br>
 
->  The mc311hca data set records the calls received by the County's 311 Customer Service System relayed to the Department of Housing and Community Affairs.  Many of these calls do not relate to code violations, however, a large majority of housing violations appear to originate from 311 calls.  Most of the columns relate to political oversight and service level agreement compliance.
+>  The mc311hca data set records the calls received by the County's 311 Customer Service System relayed to the Department of Housing and Community Affairs (DHCA aka HCA).  Many of these calls do not relate to code violations, however, a large majority of housing violations appear to originate from 311 calls.  Most of the columns relate to political oversight and service level agreement compliance.
 
 ```{r}
 
@@ -243,11 +199,29 @@ html(desc_mc311hca)
 ```
 
 
-### **Visualizations: Alluvial Plots** {#sddSection8}
-[{previous}](#sddSection7)|[{toc}](#sddSection0)|[{next}](#sddSection9)
+### **Visualizations: Alluvial Plots Overview** {#sddSection8}
+[{previous}](#sddSection7)|[{toc}](#sddSection0)|[{next}](#sddSection8a)
 ---------------|------------|----------
 <br>
 
+```{r}
+alluvialBasePlot
+```
+
+> **Alluvial Plots** are variations of [Napoleon's March to Russia](https://datavizblog.files.wordpress.com/2013/05/map-full-size1.png) and [Sankey diagrams](https://en.wikipedia.org/wiki/Sankey_diagram). They shine in many ways:
+
+*  showing connections between multiple categorical variables. 
+*  including numeric variables through binning
+*  creating a storyboard by copying the right most variable to the left of the next plot.
+
+>  They are implemented in R by the [ggalluvial package](https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html) which is an add on to ggplot2.  This capability exists in [python](https://medium.com/plotly/4-interactive-sankey-diagram-made-in-python-3057b9ee8616) and can be replicated in [Tableau](https://www.census.gov/library/visualizations/interactive/young-adults-higher-education.html).
+
+
+
+### **Visualizations: Alluvial Plots by Date and Distance** {#sddSection8a}
+[{previous}](#sddSection8)|[{toc}](#sddSection0)|[{next}](#sddSection8b)
+---------------|------------|----------
+<br>
 
 ```{r}
 alluvialBasePlot
@@ -258,6 +232,9 @@ alluvialBasePlot
 alluvialDistDirPlot
 ```
 
+### **Visualizations: Alluvial Plots by Habitability and Safety** {#sddSection8b}
+[{previous}](#sddSection8a)|[{toc}](#sddSection0)|[{next}](#sddSection9)
+---------------|------------|----------
 
 ```{r}
 alluvialHabitabilityPlot
@@ -269,7 +246,7 @@ alluvialSafetyPlot
 ```
 
 ### **Data Sources** {#sddSection9}
-[{previous}](#sddSection8)|[{toc}](#sddSection0)|[{next}](#sddSection10)
+[{previous}](#sddSection8b)|[{toc}](#sddSection0)|[{next}](#sddSection10)
 ---------------|------------|----------
 <br>
 
@@ -298,207 +275,8 @@ The [**Maryland Property Data - Parcel Points**](https://data.imap.maryland.gov/
 
 
 ### **Rmd Code** {#sddSection10}
-[{previous}](#sddSection9)|[{toc}](#sddSection0)|[{next}](#sddSection11)
+[{previous}](#sddSection9)|[{toc}](#sddSection0)|
 ---------------|------------|----------
 <br>
 
-### **Section 11** {#sddSection11}
-[{previous}](#sddSection10)|[{toc}](#sddSection0)|[{next}](#sddSection12)
----------------|------------|----------
-<br>
-
-### **Section 12** {#sddSection12}
-[{previous}](#sddSection11)|[{toc}](#sddSection0)|[{next}](#sddSection13)
----------------|------------|----------
-<br>
-
-### **Section 13** {#sddSection13}
-[{previous}](#sddSection12)|[{toc}](#sddSection0)|[{next}](#sddSection14)
----------------|------------|----------
-<br>
-
-### **Section 14** {#sddSection14}
-[{previous}](#sddSection13)|[{toc}](#sddSection0)|[{next}](#sddSection15)
----------------|------------|----------
-<br>
-
-### **Section 15** {#sddSection15}
-[{previous}](#sddSection14)|[{toc}](#sddSection0)|[{next}](#sddSection16)
----------------|------------|----------
-<br>
-
-### **Section 16** {#sddSection16}
-[{previous}](#sddSection15)|[{toc}](#sddSection0)|[{next}](#sddSection17)
----------------|------------|----------
-<br>
-
-### **Section 17** {#sddSection17}
-[{previous}](#sddSection16)|[{toc}](#sddSection0)|[{next}](#sddSection18)
----------------|------------|----------
-<br>
-
-### **Section 18** {#sddSection18}
-[{previous}](#sddSection17)|[{toc}](#sddSection0)|[{next}](#sddSection19)
----------------|------------|----------
-<br>
-
-### **Section 19** {#sddSection19}
-[{previous}](#sddSection18)|[{toc}](#sddSection0)|[{next}](#sddSection20)
----------------|------------|----------
-<br>
-
-### **Section 20** {#sddSection20}
-[{previous}](#sddSection19)|[{toc}](#sddSection0)|[{next}](#sddSection21)
----------------|------------|----------
-<br>
-
-### **Section 21** {#sddSection21}
-[{previous}](#sddSection20)|[{toc}](#sddSection0)|[{next}](#sddSection22)
----------------|------------|----------
-<br>
-
-### **Section 22** {#sddSection22}
-[{previous}](#sddSection21)|[{toc}](#sddSection0)|[{next}](#sddSection23)
----------------|------------|----------
-<br>
-
-### **Section 23** {#sddSection23}
-[{previous}](#sddSection22)|[{toc}](#sddSection0)|[{next}](#sddSection24)
----------------|------------|----------
-<br>
-
-### **Section 24** {#sddSection24}
-[{previous}](#sddSection23)|[{toc}](#sddSection0)|[{next}](#sddSection25)
----------------|------------|----------
-<br>
-
-### **Section 25** {#sddSection25}
-[{previous}](#sddSection24)|[{toc}](#sddSection0)|[{next}](#sddSection26)
----------------|------------|----------
-<br>
-
-### **Section 26** {#sddSection26}
-[{previous}](#sddSection25)|[{toc}](#sddSection0)|[{next}](#sddSection27)
----------------|------------|----------
-<br>
-
-### **Section 27** {#sddSection27}
-[{previous}](#sddSection26)|[{toc}](#sddSection0)|[{next}](#sddSection28)
----------------|------------|----------
-<br>
-
-### **Section 28** {#sddSection28}
-[{previous}](#sddSection27)|[{toc}](#sddSection0)|[{next}](#sddSection29)
----------------|------------|----------
-<br>
-
-### **Section 29** {#sddSection29}
-[{previous}](#sddSection28)|[{toc}](#sddSection0)|[{next}](#sddSection30)
----------------|------------|----------
-<br>
-
-### **Section 30** {#sddSection30}
-[{previous}](#sddSection29)|[{toc}](#sddSection0)|[{next}](#sddSection31)
----------------|------------|----------
-<br>
-
-### **Section 31** {#sddSection31}
-[{previous}](#sddSection30)|[{toc}](#sddSection0)|[{next}](#sddSection32)
----------------|------------|----------
-<br>
-
-### **Section 32** {#sddSection32}
-[{previous}](#sddSection31)|[{toc}](#sddSection0)|[{next}](#sddSection33)
----------------|------------|----------
-<br>
-
-### **Section 33** {#sddSection33}
-[{previous}](#sddSection32)|[{toc}](#sddSection0)|[{next}](#sddSection34)
----------------|------------|----------
-<br>
-
-### **Section 34** {#sddSection34}
-[{previous}](#sddSection33)|[{toc}](#sddSection0)|[{next}](#sddSection35)
----------------|------------|----------
-<br>
-
-### **Section 35** {#sddSection35}
-[{previous}](#sddSection34)|[{toc}](#sddSection0)|[{next}](#sddSection36)
----------------|------------|----------
-<br>
-
-### **Section 36** {#sddSection36}
-[{previous}](#sddSection35)|[{toc}](#sddSection0)|[{next}](#sddSection37)
----------------|------------|----------
-<br>
-
-### **Section 37** {#sddSection37}
-[{previous}](#sddSection36)|[{toc}](#sddSection0)|[{next}](#sddSection38)
----------------|------------|----------
-<br>
-
-### **Section 38** {#sddSection38}
-[{previous}](#sddSection37)|[{toc}](#sddSection0)|[{next}](#sddSection39)
----------------|------------|----------
-<br>
-
-### **Section 39** {#sddSection39}
-[{previous}](#sddSection38)|[{toc}](#sddSection0)|[{next}](#sddSection40)
----------------|------------|----------
-<br>
-
-### **Section 40** {#sddSection40}
-[{previous}](#sddSection39)|[{toc}](#sddSection0)|[{next}](#sddSection41)
----------------|------------|----------
-<br>
-
-### **Section 41** {#sddSection41}
-[{previous}](#sddSection40)|[{toc}](#sddSection0)|[{next}](#sddSection42)
----------------|------------|----------
-<br>
-
-### **Section 42** {#sddSection42}
-[{previous}](#sddSection41)|[{toc}](#sddSection0)|[{next}](#sddSection43)
----------------|------------|----------
-<br>
-
-### **Section 43** {#sddSection43}
-[{previous}](#sddSection42)|[{toc}](#sddSection0)|[{next}](#sddSection44)
----------------|------------|----------
-<br>
-
-### **Section 44** {#sddSection44}
-[{previous}](#sddSection43)|[{toc}](#sddSection0)|[{next}](#sddSection45)
----------------|------------|----------
-<br>
-
-### **Section 45** {#sddSection45}
-[{previous}](#sddSection44)|[{toc}](#sddSection0)|[{next}](#sddSection46)
----------------|------------|----------
-<br>
-
-### **Section 46** {#sddSection46}
-[{previous}](#sddSection45)|[{toc}](#sddSection0)|[{next}](#sddSection47)
----------------|------------|----------
-<br>
-
-### **Section 47** {#sddSection47}
-[{previous}](#sddSection46)|[{toc}](#sddSection0)|[{next}](#sddSection48)
----------------|------------|----------
-<br>
-
-### **Section 48** {#sddSection48}
-[{previous}](#sddSection47)|[{toc}](#sddSection0)|[{next}](#sddSection49)
----------------|------------|----------
-<br>
-
-### **Section 49** {#sddSection49}
-[{previous}](#sddSection48)|[{toc}](#sddSection0)|[{next}](#sddSection50)
----------------|------------|----------
-<br>
-
-### **Section 50** {#sddSection50}
-[{previous}](#sddSection49)|[{toc}](#sddSection0)|
----------------|------------|----------
-<br>
-
+>  see [mocoCleanAndCombine.Rmd](https://github.com/sdutky/mcData205/blob/master/mcHousingCodeViolations/mocoCleanAndCombine.Rmd) on GitHub
