@@ -1,0 +1,166 @@
+head	1.1;
+access;
+symbols;
+locks
+	dutky:1.1; strict;
+comment	@# @;
+
+
+1.1
+date	2020.04.19.18.36.46;	author dutky;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@---
+title: "Housing Code Enforcement Project Plan"
+author: "Steve Dutky Montgomery College"
+date: "2/18/2020"
+output: html_document
+---
+
+```{r eval=FALSE}
+
+#$Log$
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE)
+```
+
+```{r}
+library(pander)
+```
+
+### **Herein:** {#sddSection0}
+*   **[Introduction](#sddSection1)**
+*   **[Data Sets](#sddSection2)**
+*   **[Preliminary Figures and Questions](#sddSection3)**
+*   **[Methods: Cleaning, Analysis, Visualization](#sddSection4)**
+
+******
+
+
+###  **Introduction** {#sddSection1}
+[{previous}](#sddSection0)|[{toc}](#sddSection0)|[{next}](#sddSection2)
+---------------|------------|----------
+
+> Housing code enforcement, a Montgomery County official told me, is a balancing act.  What level of bad conditions do you accept to keep people from becoming homeless?  The data I have seen do not yet clearly answer this question.
+
+> The County Code mandates that the Department of Housing and Community Affairs (DHCA) inspect rental properties yearly for compliance with regulations. Inspections are also performed in response to complaints submitted to the County's 311 system and routed to DHCA.  DHCA inspectors (currently 19) arrange for and carry out inspections, document infractions, serve notice to property owners, and, where owners fail to correct infractions, issue civil citations to appear in court.  Additionally, they update databases that track infractions.
+
+> In 2016 the County Council passed [Bill 19-15](https://www.montgomerycountymd.gov/COUNCIL/Resources/Files/bill/2015/Packets/20150618_1.pdf) that made significant changes to the code affecting inspections and enforcement of the regulations for rental housing [(press release)](https://www2.montgomerycountymd.gov/mcgportalapps/Press_Detail.aspx?Item_ID=17590&Dept=1):
+
+*  Require the Department of Housing and Community Affairs (DHCA) to inspect a sample of every multi-family rental property over the next two years to establish baseline information about the condition of the County’s rental housing stock.
+*  Focus ongoing enforcement resources on properties with significant health and safety issues and properties with numerous code violations.
+*  Provide clearer information about the state of rental units in the County via improved data collection and publication.
+*  Provide many benefits to tenants that should improve the stability and quality of their living arrangements.
+
+>  This project seeks to model the factors that influence the severity of housing code violations and possibly see how the inspection process could be optimized.
+
+### **Data Sets** {#sddSection2}
+[{previous}](#sddSection1)|[{toc}](#sddSection0)|[{next}](#sddSection3)
+---------------|------------|----------
+
+The [**Maryland Property Data - Parcel Points**](https://data.imap.maryland.gov/datasets/maryland-property-data-parcel-points/data?where=JURSCODE%20%3D%20%27MONT%27), filtered for Montgomery County
+
+>  This describes all 344K properties in Montgomery County.  In addition to property address, it contains key data including geographic location and census block groups that allow it to be joined to both County and U.S. Census data sets. It has interesting items such as property owner; number of dwelling units; and dates of last inspection, sale, and construction.  Indicators of owner occupancy and residential property allow filtering of rental property.
+
+[**Data Montgomery Housing Code Violations**](https://data.montgomerycountymd.gov/Consumer-Housing/Housing-Code-Violations/k9nj-z35d)
+
+>  This contains 470K housing code violations dating from 2013.  It serves as the primary data source for this project.  Although it catalogs only violations, the case number id provides an estimate of total cases including those without infractions. It describes the items in violation, the code citations, corrective actions required and the 311 service complaint. It provides dates of filing, assignment, inspection, correction and closure. 
+
+[**Data Montgomery Troubled Property Analysis**](https://data.montgomerycountymd.gov/Consumer-Housing/Troubled-Properties-Analysis/bw2r-araf)
+
+> This apparently identifies the properties currently subject to more stringent inspections and corrective action plans.  Its case number links back to the Housing Code Violation data set and may be useful to extract other cases with severe violations.
+
+[**U.S. Census 2018 American Community Survey (ACS) extract for Montgomery County Block Groups**](https://data.census.gov/cedsci/table?tid=ACSDT5Y2018.B25032&vintage=2018&layer=blockgroup&t=Owner%2FRenter%20%28Householder%29%20Characteristics&g=0500000US24031.150000&hidePreview=false&cid=B11001A_001E)
+
+>  This data set provides estimates of the number of units in owner and renter occupied properties in each census block in Montgomery County. The estimates are based on data sampled between 2014 and 2018.  
+
+**Other Data Montgomery data sets and text sources to be used in the project include:**
+
+*  To determine the number and position of DHCA code inspectors: Employee Salaries ( [2014](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2014/54rh-89p8), [2015](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2015/6rqk-pdub), [2016](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2016/xj3h-s2i7), [2017](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2017/2qd6-mr43), [2018](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2018/kdqy-4wzv) ) 
+*  To compare the service requests referred to DHCA to those resulting in cited violations: [MC311 Service Requests](https://data.montgomerycountymd.gov/Government/MC311-Service-Requests/xtyh-brr2/data)
+*  To determine the geographic boundaries of Census Block Groups: [Census Block Groups 2010](https://data.montgomerycountymd.gov/Technology/Census-Block-Groups-2010-geographic-data-/y2z8-tsry)
+*  The [County Code](http://montgomeryco-md.elaws.us/code/coor_ptii), [Housing Code Enforcement Handbook](https://www.montgomerycountymd.gov/DHCA/Resources/Files/community/code/handbook_eng.pdf),and  [Bill 19-15](https://www.montgomerycountymd.gov/COUNCIL/Resources/Files/bill/2015/Packets/20150618_1.pdf)
+
+### **Preliminary Figures and Questions** {#sddSection3}
+[{previous}](#sddSection2)|[{toc}](#sddSection0)|[{next}](#sddSection4)
+---------------|------------|----------
+
+<center>
+#### **Rental Properties flagged as Residential in 2010, not owner occupied.**
+<center> from the [Maryland Parcel Points Data Set](https://data.imap.maryland.gov/datasets/maryland-property-data-parcel-points/data?where=JURSCODE%20%3D%20%27MONT%27)
+
+```{r }
+load("panderRentals.rdata")
+pander(panderRentals)
+```
+
+<center>
+#### **Housing Code Inspections, 311 Service Requests,  Violations Cited**
+<center> from joining [Housing Code Violations](https://data.montgomerycountymd.gov/Consumer-Housing/Housing-Code-Violations/k9nj-z35d) and [311 Service Requests](https://data.montgomerycountymd.gov/Government/MC311-Service-Requests/xtyh-brr2/data)
+
+```{r }
+load("panderCounts.rdata")
+pander(panderCounts)
+```
+
+### Questions
+
+*  The number of rental properties/units derived from Parcel Points data markedly exceeds the numbers reported by DHCA.  Why is this?
+*  The number of rental dwellings dwarf the number the 20 odd inspectors can thoroughly inspect. What effect would adjusting the inspection schedule or the handling of 311 complaints have?
+*  The number of violations has been increasing since 2015, but has ballooned in 2019.  Why?
+*  How do the severity of violations vary with other features such as age of building, location, construction material and other items appearing in the Parcel Points data set?
+*  One can assume that race, ethnicity, and economic condition of tenants are closely related to the condition of their rental dwellings. Where are the exceptions?
+*  The Parcel Points data set identifies owners.  Do any of them own multiple properties that have been cited?
+*  What properties have cleaned up their repeated and/or severe infractions? What characteristics do they share?
+*  Have any problem properties changed from owner occupied to rental or vice-versa?
+*  How has the assessed value of problem properties varied compared to others in the census block group?
+*  From the 2018 ACS, it may be possible to infer the population density of problem properties.  How does this compare to other owner occupied and rental properties in the same census code blocks?
+
+### **Methods: Cleaning, Analysis, Visualization** {#sddSection4}
+[{previous}](#sddSection3)|[{toc}](#sddSection0)|
+---------------|------------|----------
+
+> Nearly all of the work on this project will be done in R in the Rstudio development and markdown environment.  Given the variable download performance of the data sources, once obtained, I will upload the csv data sets to my publicly accessible GitHub site. This will be the source from which the R code will get its data for further cleaning and presentation.
+
+#### **Cleaning: join violations to parcel points, map the results to census block groups**
+> I will clean the data sets primarily using libraries from tidyverse and related R packages. Additionally, I will use sf, the Simple Features geospatial library, to manipulate locations and place entries into census block groups.
+
+>  Some aspects of cleaning will include:
+
+*  Purging entries from Housing Code Violations and Parcel Points that do not involve rental properties,
+*  Depending on volume, using either Google Maps or the U.S. Census TIGER LINE data set to place entries in their correct locations,
+*  Matching entries in Housing Code Violations and Parcel Points, first by location, and then, using fuzzy matching by text address.
+
+<br>
+
+#### **Analysis: what features explain how a rental property tips into or out of trouble?**
+
+>  Potential methods include:
+
+*  Principal Component Analysis to group features into independent components that move with the severities of conditions of properties,
+*  K-means or other clustering techniques to show how components move together,
+*  Logistic regression to model how likely, based on weighted components, conditions of properties are to change.
+
+<br>
+
+#### **Visualizations: ggplot2 and add-ons**
+
+*  Violin plots to show the occurrence and distribution of features,
+*  Geospatial plots of census block group weaving properties, characteristics, severity of violations, with features obtained from the 2018 ACS.
+*  K-means or other cluster plots.
+@

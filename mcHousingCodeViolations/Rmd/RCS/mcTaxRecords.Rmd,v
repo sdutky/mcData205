@@ -1,0 +1,52 @@
+head	1.1;
+access;
+symbols;
+locks
+	dutky:1.1; strict;
+comment	@# @;
+
+
+1.1
+date	2020.04.19.18.36.46;	author dutky;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@---
+title: "mcTaxRecords"
+author: "Steve Dutky MC Data110 Fall 2019"
+date: "12/22/2019"
+output: html_document
+---
+
+```{r eval=FALSE}
+
+#$Log$
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+# main https://apps.montgomerycountymd.gov/realpropertytax
+# street address button: #ctl00_MainContent_btnAddress
+tax record search result:  
+acct# #ctl00_MainContent_grdAddressTracking_ctl02_lnkedit  
+view button: #ctl00_MainContent_grdParcel_ctl02_lnkedit2
+owner line1: #ctl00_MainContent_lblName
+owner line2: #ctl00_MainContent_lblCompleteAddress
+bill class: .bill-class .active+ .active td
+@

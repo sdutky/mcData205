@@ -1,0 +1,701 @@
+head	1.2;
+access;
+symbols;
+locks
+	dutky:1.2; strict;
+comment	@# @;
+
+
+1.2
+date	2020.04.19.19.45.48;	author dutky;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2020.04.19.18.36.46;	author dutky;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.2
+log
+@cleaned up and normalized
+@
+text
+@---
+title: "Montgomery County Housing Code Violations - Clean and Combine Data Sets"
+author: "Steve Dutky Montgomery College"
+date: "3/6/2020"
+output: html_document
+---
+
+```{r eval=FALSE}
+
+#$Log: mocoCleanAndCombine.Rmd,v $
+#Revision 1.1  2020/04/19 18:36:46  dutky
+#Initial revision
+#
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+### [Montgomery County 2010 Census Block Groups](https://data.montgomerycountymd.gov/api/views/y2z8-tsry/rows.csv?accessType=DOWNLOAD)
+### [Maryland Property Parcel Dataset Montgomery Count Filter]( https://opendata.arcgis.com/datasets/042c633a05df48fa8561f245fccdd750_0.csv?where=JURSCODE%20%3D%20%27MONT%27&outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D) residential,not owner occupied, mc
+### [Maryland Property Parcel Dataset Montgomery Count Filter](https://opendata.arcgis.com/datasets/042c633a05df48fa8561f245fccdd750_0.zip?where=JURSCODE%20%3D%20%27MONT%27%20AND%20OOI%20%3D%20%27N%27%20AND%20%20(DESCLU%20%3D%20%27Residential%27%20OR%20DESCLU%20%3D%20%27Residential%20Condominium%27%20OR%20DESCLU%20%3D%20%27Town%20House%27%20OR%20DESCLU%20%3D%20%27Apartments%27) residential,not owner occupied, mc
+
+```{r}
+# Load Libaries
+library(plyr) # must be loaded before tidyverse
+library(tidyverse)
+library(lubridate)
+library(pander)
+library(ggmap)
+library(sf)
+library(sp)
+library(tidygeocoder)
+library(purrr)
+library(spatial)
+library(ggspatial)
+library(scales)
+library(ggalluvial)
+library(ggthemes)
+library(geosphere)
+library(leaflet)
+```
+```{r}
+#functions:
+
+geo_inside <- function(lon, lat, map, variable) {
+
+  variable <- enquo(variable)
+  # slow if lots of lons and lats or big sf - needs improvement
+  pt <-
+    tibble(x = lon,
+                       y = lat) %>%
+    st_as_sf(coords = c("x", "y"), crs = st_crs(map))
+  pt %>% st_join(map) %>% pull(!!variable)
+
+}
+
+f<-function(a) plyr::count(a) %>% arrange(desc(freq))
+s<-summary
+
+bearingToCompass<-function(bearing) {
+  bearing<-ifelse(bearing<0,360+bearing,bearing)
+#  compass<-c("z North","y Northeast","x East","w Southeast", "v South","u Southwest","t West","s Northwest","z North")
+# compass<-c("z North","x East","v South","t West","z North")
+  b<-round(bearing/45)
+  f<-as.factor(ifelse(b==8,0,b))
+  levels(f)=c("North","Northeast","East","Southeast", "South","Southwest","West","Northwest")
+  f
+# compass[b]
+}
+
+cutQuantile<-function(val) {
+              f<-cut(val,quantile(val,na.rm=TRUE))
+              levels(f)<-c(levels(f),"NA")
+              f[is.na(f)]<-"NA"
+              f
+}
+
+
+```
+
+```{r}
+# get housing code violations
+colTypes<-paste(rep("c",1000),collapse = "")
+
+#hcv<-read_csv("https://data.montgomerycountymd.gov/api/views/k9nj-z35d/rows.csv?accessType=DOWNLOAD",col_types = colTypes)
+#hcv<-read_csv("https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/Housing_Code_Violations.zip",col_types = colTypes)
+
+fnHcv<-paste(tempdir(),"/mcHcv.zip",sep="")
+download.file("https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/Housing_Code_Violations.zip",fnHcv,mode = "wb")
+hcv<-read_csv(fnHcv,col_types = colTypes)
+```
+
+
+```{r}
+names(hcv)<- c(
+      "caseId",
+      "dateFiled",
+      "dateAssigned",
+      "dateClosed",
+      "disposition",
+      "streetAddress",
+      "unitNumber",
+      "city",
+      "zipCode",
+      "serviceRequestNumber",
+      "dateServiceRequestCreated",
+      "dateServiceRequestClosed",
+      "serviceRequestStatus",
+      "violationId",
+      "dateInspected",
+      "dateCorrected",
+      "locationDescription",
+      "action",
+      "codeReference",
+      "condition",
+      "item",
+      "latitude",
+      "longitude",
+      "location"
+)
+
+hcv <- hcv %>%
+  filter(action!="No Action Necessary") %>%
+  mutate(
+    dateFiled= ymd(dateFiled),
+    dateAssigned= ymd(dateAssigned),
+    dateClosed= ymd(dateClosed),
+    dateServiceRequestCreated= ymd(dateServiceRequestCreated),
+    dateServiceRequestClosed= ymd(dateServiceRequestClosed),
+    dateInspected= ymd(dateInspected),
+    dateCorrected= ymd(dateCorrected),
+    latitude= as.numeric(latitude),
+    longitude= as.numeric(longitude),
+    year=year(dateFiled)
+  ) %>%
+  filter(year>2012 & year<2020)
+
+
+```
+
+```{r}
+# isolate cases where either latitude or longitude equals 0 for geocoding
+geoCode<- hcv %>%
+  filter(longitude==0 | latitude==0) %>%
+# set up full address for geocoding
+  mutate( address=paste(streetAddress,city,"MD",zipCode)) %>%
+  select(caseId,address) %>%
+  distinct() %>%
+  geocode(address = "address", method="cascade", lat="latitude", lon="longitude") %>%
+# less than 100 returned uncoded  
+  filter(!(is.na(longitude)  | is.na(latitude))) %>%
+  select(caseId,longitude,latitude)
+
+# join in all rows in hcv that have valid (ish) longitude and latitude
+
+geoCode<- hcv %>%
+  select(caseId,longitude,latitude) %>%
+  distinct() %>%
+  filter(longitude!=0 & latitude!=0) %>%
+  bind_rows(geoCode)
+  
+
+```
+
+```{r}
+# get the Census Block Group shape files from Data Montgomery:
+tempfile("cbg",fileext = ".zip")
+unlink(paste(tempdir(),"/geo_export*.*",collapse = "",sep=""))
+zip<-paste(tempdir(),"/cbg.zip",collapse="",sep="")
+download.file("https://data.montgomerycountymd.gov/api/geospatial/y2z8-tsry?method=export&format=Shapefile",zip)
+
+unzip(zipfile = zip,exdir = tempdir())
+
+fn<-paste(tempdir(),"/",list.files(path=tempdir(),pattern = "^geo_export[^.]+.shp$"),collapse = "",sep = "")
+censusBlockGroups<-st_read(fn,stringsAsFactors = FALSE)
+censusBlockGroups<- st_transform(
+  censusBlockGroups, "+proj=longlat +ellps=WGS84 +datum=WGS84"
+)
+censusBlockGroups$longitude<-as.numeric(censusBlockGroups$longitude)
+censusBlockGroups$latitude<-as.numeric(censusBlockGroups$latitude)
+
+# 
+```
+```{r}
+# map geoCodes to Census Block Groups
+geoCode<- geoCode %>%
+  mutate(bg2010=geo_inside(longitude,latitude,censusBlockGroups,bg2010))
+```
+```{r}
+# join bg2010 block groups into hcv along with all latitude and longitude
+hcv<-hcv %>% inner_join(geoCode,by="caseId")
+```
+
+```{r}
+# fix up longitude and latitude
+hcv<- hcv %>%
+  mutate(longitude=longitude.y, latitude=latitude.y) %>%
+  select(-longitude.x,-longitude.y,-latitude.x,-latitude.y)
+```
+
+
+```{r}
+# get codeReferencesCategoriesSeverity
+codeReferencesCategoriesSeverity<- read_csv("https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/codeReferencesCategoriesSeverity.csv")
+
+# join category & severity to hcv
+hcv<-hcv %>% 
+  inner_join(
+    codeReferencesCategoriesSeverity[,c("codeReference","violationClass","violationCategory","violationSeverity")],
+    by="codeReference"
+  )
+```
+
+```{r}
+pander(codeReferencesCategoriesSeverity %>%
+         select(frequency,violationClass,violationSeverity,violationCategory,codeReference) %>%
+         arrange(violationClass,violationCategory))
+```
+
+```{r}
+pander(codeReferencesCategoriesSeverity %>%
+         select(violationClass,violationSeverity,codeReference, descr) %>%
+         mutate(descr=substr(descr,1,26)) %>%
+         arrange(violationClass,desc( violationSeverity)))
+```
+
+```{r}
+# download and assemble mc Parcel Points zip file from GitHub
+fnPP<-tempfile(c("part1","part2"))
+fnPP[3]<-paste(tempdir(),"/mcPP.zip",sep="")
+
+download.file("https://github.com/sdutky/mcData205/raw/master/mdParcelPoints/mdParcelPoints00",
+              fnPP[1],mode="wb")
+download.file("https://github.com/sdutky/mcData205/raw/master/mdParcelPoints/mdParcelPoints01",
+              fnPP[2],mode="wb")
+system(paste("cat",fnPP[1],fnPP[2],">",fnPP[3]))
+```
+
+
+```{r eval=TRUE}
+
+# get parcel points
+mcPp<-read_csv( fnPP[3],  col_types = paste(rep("c",134),collapse="",sep=""))
+  
+# originally from  "https://opendata.arcgis.com/datasets/042c633a05df48fa8561f245fccdd750_0.csv?where=JURSCODE%20%3D%20%27MONT%27&outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D",
+
+
+```
+
+```{r}
+# get columns of interest
+mcPp<- mcPp %>%
+    select(
+      X,
+      Y,
+      OBJECTID,
+      JURSCODE,
+      BG2010,
+      OOI,
+      RESITYP,
+      ADDRESS,
+      STRTNUM,
+      STRTDIR,
+      STRTNAM,
+      STRTTYP,
+      STRTSFX,
+      STRTUNT,
+      ADDRTYP,
+      CITY,
+      ZIPCODE,
+      OWNNAME1,
+      NAMEKEY,
+      OWNADD1,
+      OWNADD2,
+      OWNCITY,
+      OWNSTATE,
+      OWNERZIP,
+      ZONING,
+      DESCLU,
+      ACRES,
+      TRADATE,
+      YEARBLT,
+      SQFTSTRC,
+      STRUGRAD,
+      DESCBLDG,
+      LASTINSP,
+      BLDG_STORY,
+      BLDG_UNITS,
+      RESI2010
+    )
+
+```
+```{r}
+# give them friendlier names
+    names(mcPp)<-c(
+      "longitude",            #
+      "latitude",            #
+      "objectId",       #
+      "jursCode",       #
+      "bg2010",         #
+      "ownerOccupancy", #
+      "residenceType",  #
+      "address",        #
+      "streetNum",      #
+      "streetDir",      #
+      "streetNam",      #
+      "streetTyp",      #
+      "streetSfx",      #
+      "streetUnt",      #
+      "addrtyp",        #
+      "city",           #
+      "zipcode",        #
+      "ownname1",       #
+      "namekey",        #
+      "ownadd1",        #
+      "ownadd2",        #
+      "owncity",        #
+      "ownstate",       #
+      "ownerzip",       #
+      "zoning",         #
+      "descLandUse",    #
+      "acres",          #
+      "lastSale",       #
+      "yearBuilt",      #
+      "sqftStrc",       #
+      "struGrad",       #
+      "descBldg",       #
+      "lastInsp",       #
+      "bldgStory",      #
+      "bldgUnits",      #
+      "resi2010"        #
+    )
+
+# fixed column classes
+
+mcPp<- mcPp %>%
+  mutate(
+    longitude=as.numeric(longitude),
+    latitude=as.numeric(latitude),
+    acres=as.numeric(acres),
+    yearBuilt=as.numeric(yearBuilt),
+    sqftStrc=as.numeric(sqftStrc),
+    lastInsp=as.numeric(lastInsp),
+    bldgStory=as.numeric(bldgStory),
+    bldgUnits=as.numeric(bldgUnits),
+    lastSale=ymd(lastSale),
+    lastInsp=ymd(paste(lastInsp,"01",sep=""))
+  )  
+
+```
+
+```{r}
+frq<-lapply(mcPp,plyr::count)
+sumFreq<-lapply(frq,function(a) quantile(a$freq))
+```
+
+```{r}
+cn<-hcv %>% select(dateFiled,caseId,violationId,serviceRequestNumber) %>%
+  group_by(year) %>% 
+  mutate(case=as.numeric(caseId)) %>%
+  summarise(
+    totalCases=max(case)-min(case),
+    citedCases=n_distinct(caseId),
+    from311Request=n_distinct(serviceRequestNumber,na.rm = TRUE),
+    violationsCited=n()
+  ) 
+```
+
+```{r}
+# define summaryRentals: residential properties (2010) not occupied by owner
+mcRentalsPp<-mcPp %>%
+      mutate(
+              address=paste(address,zipcode,sep = " "),
+              address=tolower(gsub("  *"," ",address)),
+              address=gsub("[^a-z0-9 ]","",address),
+              address=gsub(" $","",address),
+              address=sub("road 2","rd 2",address),
+              address=sub("lane 2","ln 2",address),
+              address=sub("circle 2","cir 2",address),
+              bldgUnits=pmax(bldgUnits,1),
+              descBldg=mapply(function(a,b) { if (is.na(a)) b else a }, descBldg,residenceType )
+      ) %>%
+      filter(resi2010=="0",
+             !is.na(streetNam),
+             ownerOccupancy=="N",
+             descLandUse %in% c("Residential","Residential Condominium","Apartments"),
+             descBldg %in% c(
+                 "SF",
+                 "DWEL Standard Unit",
+                 "DWEL Condominium Garden Unit",
+                 "DWEL Center Unit",
+                 "DWEL Condominium High Rise",
+                 "DWEL End Unit",
+                 "DWEL Condominium Townhouse",
+                 "DWEL Split Level",
+                 "AP",
+                 "DWEL Split Foyer",
+                 "HOUSING Apartment(s)",
+                 "HOUSING Residence Multiple",
+                 "CARE Home for the Elderly"
+             )
+      ) 
+
+
+tallyBldgs <- mcRentalsPp %>% select(descBldg) %>% group_by(descBldg) %>% summarise(count=n()) %>% arrange(desc(count))
+tallyLandUse <- mcRentalsPp %>% select(descLandUse) %>% group_by(descLandUse) %>% summarise(count=n()) %>% arrange(desc(count))
+tallyUnits <- mcRentalsPp %>% select(bldgUnits) %>% group_by(bldgUnits) %>% summarise(count=n()) %>% arrange(desc(count))
+
+
+
+```
+
+```{r}
+summaryRentals<-mcRentalsPp %>%
+      summarise(
+        totalProperties=n(),
+        totalUnits=sum(bldgUnits),
+        minUnits=min(bldgUnits),
+        q25=quantile(bldgUnits,probs = .25),
+        meanUnits=mean(bldgUnits),
+        q75=quantile(bldgUnits,probs = .75),
+        maxUnits=max(bldgUnits)
+      )
+```
+
+```{r}
+# mc 311 service requests, previously filtered to include DHCA requests
+fn311<-paste(tempdir(),"/mc311hca.zip",sep="")
+download.file("https://github.com/sdutky/mcData205/raw/master/mc311hca/mc311HcaCode.zip",fn311,mode = "wb")
+mc311hca<-read_csv(fn311)
+cn311 <- mc311hca %>%
+      mutate(mdy=sub("^([0-9/]+).*$","\\1",Opened),year=year(mdy(mdy))) %>%
+      filter(year>2012 & year<2020) %>%
+      group_by(year) %>%
+      summarise(`311referrals`=n()) %>%
+  inner_join(cn)
+
+panderCounts<-cn311
+save(panderCounts,file="panderCounts.rdata")
+pandersummaryRentals<-summaryRentals
+save(pandersummaryRentals,file="pandersummaryRentals.rdata")
+
+pander(summaryRentals)
+pander(cn311)
+```
+
+
+
+```{r}
+# Generate samples for alluvial plots
+RV<-c(-77.1494,39.0831)   # 39.0831° N, 77.1494° W location of County Executive Building Rockville MD
+hcvSample<- hcv %>%
+               sample_n(10000) %>%
+                mutate(
+                  count=1,
+                  daysOpen=as.numeric(difftime(dateCorrected,dateFiled,units = c("days"))),
+                  daysOpen=cutQuantile(daysOpen),
+                  origin=ifelse(!is.na(serviceRequestNumber),"mc311","other"),
+                  year=as.character(year),
+                  corrected=ifelse(!is.na(dateCorrected),"corrected","in violation"),
+                  distance=cutQuantile( distHaversine(RV,cbind(longitude,latitude),r=3958.8)),
+                  direction=bearingToCompass(bearing(RV,cbind(longitude,latitude)))
+                ) 
+```
+
+
+
+
+
+
+
+
+```{r}
+
+alluvialBasePlot<- hcvSample %>%
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=origin,
+                  axis3=violationClass,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=year), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#              guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Origin","Violation Class",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_y_continuous(position = "left")+
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              theme_economist()+
+              ggtitle("Sampled Housing Code Violations 2013-2019")
+  
+alluvialBasePlot
+ggsave("alluvialBasePlot.png")
+          
+
+```
+
+```{r}
+
+
+alluvialDistDirPlot<- hcvSample %>%
+  
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=distance,
+                  axis3=violationClass,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=direction), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#              guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Distance","Violation Class",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              scale_y_continuous(position = "left")+
+              theme_economist()+
+              ggtitle("Sampled Housing Code Violations 2013-2019") +
+              labs( caption="Distance and Direction from the County Executive Bldg, Rockville, MD")
+  
+alluvialDistDirPlot
+ggsave("alluvialDistDirPlot.png")
+          
+
+```
+
+```{r}
+
+alluvialHabitabilityPlot<- hcvSample %>%
+            filter(violationClass=="habitability") %>%
+  
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=origin,
+                  axis3=violationCategory,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=year), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#             guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Origin","Violation Category",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              scale_y_continuous(position = "left")+
+              theme_economist()+
+              ggtitle("Sampled Housing Habitability Code Violations 2013-2019")
+  
+alluvialHabitabilityPlot
+ggsave("alluvialHabitabilityPlot.png")
+          
+
+```
+
+```{r}
+
+alluvialSafetyPlot<- hcvSample %>%
+            filter(violationClass=="safety") %>%
+  
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=origin,
+                  axis3=violationCategory,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=year), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#             guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Origin","Violation Category",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              scale_y_continuous(position = "left")+
+              theme_economist()+
+              ggtitle("Sampled Housing Code Safety Violations 2013-2019")
+  
+alluvialSafetyPlot
+ggsave("alluvialSafetyPlot.png")
+          
+
+```
+
+```{r}
+# Hmisc describe data sets
+library(Hmisc)
+
+desc_mcPP<-describe(mcPp)
+desc_mcRentalsPp<-describe(mcRentalsPp)
+desc_mc311hca<-describe(mc311hca)
+desc_hcv<-describe(hcv)
+```
+
+```{r}
+names_mcPp<-data.frame(columns= names(mcPp))
+names_mcRentalsPp<-data.frame(columns= names(mcRentalsPp))
+names_mc311hca<-data.frame(columns= names(mc311hca))
+names_hcv<-data.frame(columns= names(hcv))
+```
+
+```{r}
+save(alluvialBasePlot, alluvialDistDirPlot, alluvialHabitabilityPlot, alluvialSafetyPlot, censusBlockGroups, cn311, codeReferencesCategoriesSeverity, desc_hcv, desc_mc311hca, desc_mcPP, desc_mcRentalsPp, summaryRentals, tallyBldgs, tallyLandUse, tallyUnits,names_hcv,names_mcRentalsPp,names_mcPp,names_mc311hca, file="projectProgress.Rdata")
+```
+
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d10 4
+a13 1
+#$Log$
+a33 1
+library(fuzzyjoin)
+d42 1
+d135 2
+a136 1
+    longitude= as.numeric(longitude)
+d138 1
+a138 1
+  filter(year(dateFiled)>2012 & year(dateFiled)<2020)
+a349 2
+    
+    
+d361 1
+a361 2
+  group_by(year=year(dateFiled)) %>% 
+  filter(year>2012 & year<2020) %>%
+d445 2
+a446 2
+pander(pandersummaryRentals)
+pander(panderCounts)
+d461 1
+a461 1
+                  year=as.character(year(dateFiled)),
+d465 1
+a465 2
+                ) %>%
+           filter(year>2012 & year<2020)
+@

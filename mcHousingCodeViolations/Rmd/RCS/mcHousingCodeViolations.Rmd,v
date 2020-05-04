@@ -1,0 +1,213 @@
+head	1.1;
+access;
+symbols;
+locks
+	dutky:1.1; strict;
+comment	@# @;
+
+
+1.1
+date	2020.04.19.18.36.46;	author dutky;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@---
+title: "mcHousingCodeViolations"
+author: "Steve Dutky MC Data110 Fall 2019"
+date: "12/19/2019"
+output: html_document
+---
+
+```{r eval=FALSE}
+
+#$Log$
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### import libraries
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+# import mc Housing Code Violations dataset
+
+
+```{r}
+urls<-c(
+        "https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/hcv1_55209.csv",
+        "https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/hcv55210_110417.csv",
+        "https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/hcv110418_165625.csv",
+        "https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/hcv165626_220833.csv",
+        "https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/hcv220834_276041.csv"
+)
+
+```
+
+```{r}
+hcv<-tibble(
+	caseNumber=c(""),
+	dateFiled=c(""),
+	dateAssigned=c(""),
+	dateClosed=c(""),
+	disposition=c(""),
+	streetAddress=c(""),
+	unitNumber=c(""),
+	city=c(""),
+	zipCode=c(""),
+	serviceRequestNumber=c(""),
+	serviceRequestCreatedDate=c(""),
+	serviceRequestClosedTime=c(""),
+	serviceRequestStatus=c(""),
+	violationID=c(""),
+	inspectionDate=c(""),
+	corrected=c(""),
+	locationDescription=c(""),
+	action=c(""),
+	codeReference=c(""),
+	condition=c(""),
+	item=c(""),
+	latitude=c(""),
+	longitude=c(""),
+	location=c("")
+)
+hcv<-hcv[-1,]
+
+```
+```{r}
+realNamesHcv<-names(hcv)
+
+names(hcv)<-c(
+  	"Case Number",
+	"Date Filed",
+	"Date Assigned",
+	"Date Closed",
+	"Disposition",
+	"Street Address",
+	"Unit Number",
+	"City",
+	"Zip Code",
+	"Service Request Number",
+	"Service Request Created Date",
+	"Service Request Closed Time",
+	"Service Request Status",
+	"Violation ID",
+	"Inspection Date",
+	"Corrected",
+	"Location Description",
+	"Action",
+	"Code Reference",
+	"Condition",
+	"Item",
+	"Latitude",
+	"Longitude",
+	"Location"
+
+)
+
+names(hcv)<-c()
+
+```
+
+```{r}
+col_names<-TRUE
+
+for ( u in urls ) {
+      a<-read_csv(url(u), col_names = col_names)
+      if (col_names) {
+        names(hcv)<-names(a )
+        col_names<-FALSE
+      } else {
+        names(a)<-names(hcv)
+      }
+      hcv<-rbind(hcv,a)
+}
+names(hcv)<-realNamesHcv
+```
+
+```{r}
+freqViolations<-table(hcv$codeReference)
+freqViolations<-tibble(
+  code=names(freqViolations),
+  frequency=as.vector(freqViolations)
+) %>%
+  mutate(
+      collator=sub("-([0-9])[(]","0\\1",code),
+      collator=sub("-","",collator),
+      collator=gsub("[)()]*","",collator),
+      collator=sub("([^0-9])([0-9])([^0-9]*)$","\\10\\2\\3",collator)
+      ) %>%
+  arrange(collator)
+```
+
+```{r}
+repeatedViolations<-table(hcv$streetAddress)
+repeatedViolations<-tibble(
+  addr=names(repeatedViolations),
+  frequency=as.vector(repeatedViolations)
+) %>%
+  filter(frequency>12) %>%
+  arrange(desc(frequency)) 
+```
+
+```{r}
+# get moco parcel points
+mocoPp<-read_csv("~/mcData205/hcv/MdPropertyViewDocs/mocoParcelPoints.csv")
+```
+
+```{r}
+# get census tract polygons
+
+mocoTracts<-read_csv("parcelDocs/mocoTract2010.csv")
+```
+
+```{r}
+a<- hcv %>%
+  mutate(year=year(dateFiled)) %>%
+  group_by(year) %>%
+  mutate(
+    cases=n_distinct(caseNumber),
+    serviceRequests=n_distinct(serviceRequestNumber),
+    violations=n_distinct(violationID)
+  ) %>%
+  select(year,cases,serviceRequests,violations) %>%
+  distinct() %>%
+  arrange(year) 
+```
+#    caseNumber=n(),
+#    serviceRequestNumber=n(),
+#    violationID=n()
+#  )
+
+
+```{r}
+a<- hcv %>%
+  mutate(year=year(dateFiled)) %>%
+  group_by(year) %>%
+    mutate(
+      cases=n_distinct(caseNumber),
+      serviceRequests=n_distinct(serviceRequestNumber),
+      violations=n_distinct(violationID)
+    ) %>%
+  select(year, cases, serviceRequests, violations) %>%
+  arrange(year) %>%
+  distinct()
+```
+
+@

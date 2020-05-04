@@ -1,0 +1,192 @@
+head	1.1;
+access;
+symbols;
+locks
+	dutky:1.1; strict;
+comment	@# @;
+
+
+1.1
+date	2020.04.19.18.36.46;	author dutky;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@---
+title: "mocoCensusBlockGroups"
+author: "Steve Dutky Data 205 Montgomery College"
+date: "3/8/2020"
+output: html_document
+---
+
+```{r eval=FALSE}
+
+#$Log$
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+### Wrangling and getting wrangled by Geospatial data
+#### My project will span characterizing and analysing Housing Code Enforcement in Montgomery County.  Two of the principal data sets, [Housing Code Violations](https://data.montgomerycountymd.gov/Consumer-Housing/Housing-Code-Violations/k9nj-z35d) and [Maryland Property Data - Parcel Points](https://data.imap.maryland.gov/datasets/042c633a05df48fa8561f245fccdd750_0/data?where=JURSCODE%20%3D%20%27MONT%27), contain columns for longitude and latitude.  If their locations can be placed with U.S. Census Block Groups, these can be joined to relevant census data allowing a more thorough analysis.
+<br>
+
+#### The Census Bureau's data aggregation at the finest levels consists of Tracts, Block Groups, and Blocks.  The 2018 American Community Survey provides little relevant data for census blocks, so block groups seem to be the most promising source.
+<br>
+
+#### Montgomery County provides both [GIS shape and csv files](https://data.montgomerycountymd.gov/Technology/Census-Block-Groups-2010-geographic-data-See-About/a5zi-3qt2) for the County's census tracts, block groups, and blocks which it obtained from the U.S. Census, it provides no metadata describing the features. For my purposes the most interesting features are the latitude and longitude which I expect is the centroid of the census block groups and the multipolygon outlining the boundaries of each census block group.
+<br>
+
+#### I spent the better of this week extracting the geographic data and writing the code for locating the census block group that contains a given point. I could not convert the polygon data from the csv into something that R's Geospatial functions could handle
+
+#### There are 93039 points describing the 614 census block groups in Montgomery County.  There are better than 250K housing code violations and 300K properties located in the County.  I felt that pigeonholing to census block groups using the geospatial functions would take a formidable amount of time.  I wanted to try constructing a bounding box around each block group.  If a point fell into a single box, it was contained by single block group. If it fell into multiple boxes, the st_intersects function could identify the block group to which it belonged. I could not get this to work.
+<br>
+
+#### I discovered that longitude and latitude do not sufficiently identify a point on a map.  Other attributes such as the projection into which a map is rendered apply.  The geospatial functions vociferously complained about incompatible data.
+<br>
+
+#### Here is the code:
+
+```{r}
+# load libraries
+library(plyr)
+library(tidyverse)
+library(purrr)
+library(sf)
+library(sp)
+library(spatial)
+library(ggspatial)
+
+freq<-plyr::count
+```
+
+```{r}
+# get shape file from Moco Open Data
+tempfile("cbg",fileext = ".zip")
+unlink(paste(tempdir(),"/geo_export*.*",collapse = "",sep=""))
+zip<-paste(tempdir(),"/cbg.zip",collapse="",sep="")
+download.file("https://data.montgomerycountymd.gov/api/geospatial/y2z8-tsry?method=export&format=Shapefile",zip)
+
+unzip(zipfile = zip,exdir = tempdir())
+
+fn<-paste(tempdir(),"/",list.files(path=tempdir(),pattern = "^geo_export[^.]+.shp$"),collapse = "",sep = "")
+censusBlockGroups<-st_read(fn,stringsAsFactors = FALSE)
+censusBlockGroups<- st_transform(
+  censusBlockGroups, "+proj=longlat +ellps=WGS84 +datum=WGS84"
+)
+censusBlockGroups$longitude<-as.numeric(censusBlockGroups$longitude)
+censusBlockGroups$latitude<-as.numeric(censusBlockGroups$latitude)
+
+# compute the bounding boxes of each census block group and bind columns
+bb<-as.data.frame.matrix(sapply(censusBlockGroups$geometry,st_bbox))
+censusBlockGroups<-cbind(censusBlockGroups,t(bb))
+```
+
+```{r message=FALSE}
+# Function to return the index of census block that intersects the location
+insideCensusBlockGroup<-function(lon,lat) {
+  # identify block group bounding boxes that enclose lon and lat
+  insideBgBox<-function(lon,lat) {
+    a<-(
+      lon>=censusBlockGroups$xmin &
+      lat>=censusBlockGroups$ymin &
+      lon<=censusBlockGroups$xmax &
+      lat<=censusBlockGroups$ymax 
+    )
+    list(which(a))
+  }
+  # for all locations that fall into multiple bboxes
+  # pick the first polygon that fits
+  #  assumes polygons do not overlap
+  insideBgPoly<-function(possibles,lon,lat) {
+    if (length(possibles)==1) return(list(possibles))
+    loc<-st_sfc(
+      crs="+proj=longlat +ellps=WGS84 +datum=WGS84",
+#      crs="+proj=longlat +ellps=WGS84 +no_defs",
+      st_multipoint(
+      as.matrix(cbind(lon,lat)))
+    )
+#    loc<-st_as_sf(
+#      data.frame(longitude=lon,latitude=lat),
+#      coords=c("longitude","latitude"),
+#      crs="+proj=longlat +ellps=WGS84 +no_defs"
+#    )
+    innies<-unlist(st_intersects(loc,censusBlockGroups$geometry[possibles]))
+    i<-length(innies)
+#      browser(expr = i==0)
+    if (i==1) return(list(possibles[1]))
+    if (i==0) return(list(NA))
+    # shouldn't be more than 1, but choose random
+    list(possibles[1+round(runif(i-1))])
+  }
+  
+  
+  bb<-mapply(insideBgBox,lon,lat)
+  bb<-mapply(insideBgPoly,bb,lon,lat)
+  unlist(bb)
+}
+
+```
+```{r}
+# see how well function insideCensusBlockGroup categorizes it's centroids:
+
+d<-insideCensusBlockGroup(censusBlockGroups$longitude,censusBlockGroups$latitude)
+# if correct summary should be true for all block groups:
+summary(d==(1:614))
+```
+
+
+```{r eval=FALSE}
+# command line hacking:
+# test inside block group
+
+getMeanPolygon<-function(pg) {
+  pts<-eval(parse(text=as.character(pg)))
+  lon<-(pts[pts<0])[1]
+  lat<-(pts[pts>0])[1]
+#  lon<-mean(pts[pts<0])
+#  lat<-mean(pts[pts>0])
+  return(list(longitude=lon,latitude=lat))
+}
+
+meanBg<-sapply(FUN=getMeanPolygon,censusBlockGroups$geometry)
+meanBg<-as.data.frame.matrix(t(meanBg))
+```
+```{r}
+#  Try just using the spatial functions:
+a<-cbind(censusBlockGroups$longitude,censusBlockGroups$latitude)
+mpts<-as.matrix(a)
+npts<-st_sfc(st_multipoint(mpts), crs = 4326)
+#b<-mapply(st_intersects,npts,censusBlockGroups$geometry)
+d<-st_intersects(npts,censusBlockGroups$geometry)
+#see if d correctly assigns intersections to correct row:
+summary(d[[1]]==(1:614))
+```
+
+```{r}
+# plot census tract 700710.0
+
+ctr700710<-grep("700710.0",censusBlockGroups$tract)
+
+ggtr<-ggplot(data=censusBlockGroups[ctr700710,]) + 
+      geom_sf() +
+      layer_spatial(st_cast(npts,"POINT")[ctr700710])+
+      coord_sf(expand = FALSE)
+#      coord_sf(xlim = c(-102.15, -74.12), ylim = c(7.65, 33.97), expand = FALSE)
+
+ggtr
+```
+
+@
