@@ -1,0 +1,544 @@
+---
+title: "Montgomery County Housing Code Violations: Code II"
+author: "sdd"
+date: "5/1/2020"
+output:
+  html_document:
+    fig_width: 8
+    fig_height: 6
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#   Generate Visualations
+
+```{r eval=FALSE}
+#  rcs revision history
+
+#$Log: 04mcHcvGenVisualizons.Rmd,v $
+#Revision 1.5  2020/05/12 20:42:23  dutky
+#checkpoint
+#
+#Revision 1.4  2020/05/11 21:12:29  dutky
+#checkpoint
+#
+#Revision 1.3  2020/05/09 21:01:44  dutky
+#checkpoint many changes:
+#added ggplot and ggplotly for codeSummary and codeTroubledSummary df's
+#combined both block groups and properties on single baseMap
+#
+#Revision 1.2  2020/05/04 02:01:34  dutky
+#checkpoint
+#
+#Revision 1.1  2020/05/03 18:08:33  dutky
+#Initial revision
+#
+
+```
+
+```{r}
+# Load Libaries
+library(plyr) # must be loaded before tidyverse
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(Hmisc)
+library(lubridate)
+library(pander)
+library(ggmap)
+library(sf)
+library(sp)
+library(tidygeocoder)
+library(purrr)
+library(spatial)
+library(ggspatial)
+library(scales)
+library(ggalluvial)
+library(ggthemes)
+library(geosphere)
+library(leaflet)
+library(RColorBrewer)
+```
+```{r}
+
+set.seed(0)
+```
+
+
+```{r}
+
+# summarise properties in block group by address generate html for leaflet plot
+
+genHtml<-function(bg) {
+    yearsSummary<-function(bg,addr) {
+      df<-p %>%
+        filter(address==addr) %>%
+              group_by(year) %>%
+              summarise(
+                  cases=sum(cases),
+                  violations=sum(violations),
+                  totalSeverity=sum(totalSeverity)
+              ) %>%
+              select(year,cases,violations,totalSeverity) 
+      df
+    }
+    
+    p<- hcvSummary %>%
+        filter(grepl(bg,bg2010))
+    
+    props<- p %>%
+        group_by(address,longitude,latitude,bg2010,blockGroup) %>%
+        summarise(
+          cases=sum(cases),
+          violations=sum(violations),
+          totalSeverity=sum(totalSeverity+1,na.rm = TRUE),
+          logSeverity=log10(totalSeverity),
+          troubled=any(troubled)
+        ) %>%
+         mutate(html=paste(sep="",
+                  "<center><strong>",
+                  address,"<br>",
+                  ifelse(troubled,"Troubled Property<br>",""),
+                  "Census Block Group ",blockGroup,
+                   html(file=FALSE,header=c("year","cases","violations","totalSeverity"),
+                        yearsSummary(bg2010,address)
+                        )
+              )
+          )
+    
+    props
+}
+
+```
+
+```{r loadData}
+# load data
+load(url("https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/Rdata/hcvWrangled.Rdata"))
+```
+
+```{r eval = FALSE}
+pander(codeReferencesCategoriesSeverity %>%
+         select(frequency,violationClass,violationSeverity,violationCategory,codeReference) %>%
+         arrange(violationClass,violationCategory))
+```
+
+```{r eval = FALSE}
+pander(codeReferencesCategoriesSeverity %>%
+         select(violationClass,violationSeverity,codeReference, descr) %>%
+         mutate(descr=substr(descr,1,26)) %>%
+         arrange(violationClass,desc( violationSeverity)))
+```
+
+```{r fig.align="center"}
+
+alluvialBasePlot<- hcvSample %>%
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=origin,
+                  axis3=violationClass,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=year), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#              guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Origin","Violation Class",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_y_continuous(position = "left")+
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              theme_economist()+
+              ggtitle("Sampled Housing Code Violations 2013-2019")
+  
+          
+
+```
+
+```{r fig.align="center"}
+
+
+alluvialDistDirPlot<- hcvSample %>%
+  
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=distance,
+                  axis3=violationClass,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=direction), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#              guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Distance","Violation Class",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              scale_y_continuous(position = "left")+
+              theme_economist()+
+              ggtitle("Sampled Housing Code Violations 2013-2019") +
+              labs( caption="Distance and Direction from County Center")
+  
+          
+
+```
+
+```{r fig.align="center"}
+
+alluvialHabitabilityPlot<- hcvSample %>%
+            filter(violationClass=="habitability") %>%
+  
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=origin,
+                  axis3=violationCategory,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=year), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#             guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Origin","Violation Category",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              scale_y_continuous(position = "left")+
+              theme_economist()+
+              ggtitle("Sampled Housing Habitability Code Violations 2013-2019")
+  
+          
+
+```
+
+```{r fig.align="center"}
+
+alluvialSafetyPlot<- hcvSample %>%
+            filter(violationClass=="safety") %>%
+  
+           ggplot( aes(y=count,
+                  axis1=year,
+                  axis2=origin,
+                  axis3=violationCategory,
+                  axis4=violationSeverity,
+                  axis5=daysOpen,
+                  axis6=corrected
+                  )
+              )+
+              geom_alluvium(aes(fill=year), width = 1/12, knot.pos = 1/6,
+                            reverse = FALSE, show.legend = TRUE
+                            ) +
+#             guides(fill=FALSE) +
+              geom_stratum(width = 1/5, reverse = FALSE) +
+              geom_label(stat = "stratum", vjust="center", infer.label=TRUE, reverse=FALSE)+
+              scale_x_continuous(breaks = 1:6, 
+                                 labels = c("Year Filed","Origin","Violation Category",
+                                            "Violation Severity","Days Open","Close Status")
+              ) +
+              scale_fill_brewer(type = "qual",palette = "Set1")+
+              scale_y_continuous(position = "left")+
+              theme_economist()+
+              ggtitle("Sampled Housing Code Safety Violations 2013-2019")
+  
+          
+
+```
+
+```{r}
+
+# generate block group summary of housing code violations by year
+genBgHcvSummaryHtml<-function(bg) {
+       hcvSummary %>%
+         filter(bg2010==bg) %>%
+         group_by(year) %>%
+         summarise(
+           properties=n_distinct(address),
+           cases=sum(cases),
+           violations=sum(violations),
+           totalSeverity=sum(totalSeverity)
+         ) %>%
+        arrange(year)
+}
+
+```
+
+```{r}
+# generate html for leaflet base map
+bgHtml <- bgDemographics %>%
+        mutate_all(as.character) %>%
+        mutate(logSeverity=round(as.numeric(logSeverity),digits = 3)) %>%
+        rowwise() %>%
+        mutate(html=paste(sep="",
+            '<center>Census Block ',blockGroup,'</center><br>', 
+#            '<center><a href="#',bg2010,'">Census Block ',blockGroup,'</a></center><br>', # link to bg detail map
+            html(file=FALSE,
+                 as.data.frame(
+                   col.names=c("properties","dwellings","ownerOcc","rentals","trouble"),
+                   list(properties,dwellings,ownerOccupied,rentals,troubledProperties)
+                 )
+            ),"<br><center>Building Median Values</center><br>",
+            html(file=FALSE,rownames=TRUE,header=c("categories","owners","renters"),
+                 as.data.frame(
+                    rbind(c(medianOwnerBldgQuality,medianRenterBldgQuality),
+                          c(medianOwnerSqFt,medianRenterSqFt),
+                          c(medianOwnerLastSale,medianRentalLastSale),
+                          c(medianOwnerYearBuilt,medianRentalYearBuilt),
+                          c(ownersMedianMoveIn,rentersMedianMoveIn),
+                          c(ownersMedianPeoplePerRoom,rentersMedianPeoplePerRoom)
+                    ),
+                    col.names=c("category","owners","renters"),
+                    row.names=c("bldgQuality (9best)","sqFt","lastSale","yearBuilt","moveInDate","peoplePerRoom")
+                 )
+              ),"<br><center>Tally of Housing Code Violations</center><br>",
+              html(file=FALSE,genBgHcvSummaryHtml(bg2010))
+            )
+        ) %>%
+        select(bg2010,blockGroup,logSeverity,html)
+            
+```
+
+```{r}
+
+hcvHtml<-genHtml(".")
+
+```
+
+```{r}
+# generate baseMap
+troubled=hcvHtml$troubled
+
+bgPal<-colorNumeric("Spectral",domain=(bgHtml$logSeverity),reverse = TRUE)
+#hcvPal<-colorNumeric("Spectral",domain=(hcvHtml$logSeverity),reverse = TRUE)
+
+baseMap<-leaflet(bgDemographics) %>% 
+  addTiles() %>%
+# setView(mcCenter[1],mcCenter[2], zoom = 10.25) %>%
+  setView(-77.00125,38.99697, zoom = 10.25) %>%  # set to 406 Domer Ave
+  addPolygons(color = "black",fill=TRUE,  fillColor = bgPal(bgHtml$logSeverity), fillOpacity = .5 ) %>%
+  addMarkers(lng=~longitude,lat=~latitude,
+             popup = bgHtml$html,
+             clusterOptions = markerClusterOptions()
+  ) %>%
+  addCircleMarkers(lng=hcvHtml[troubled,]$longitude,lat=hcvHtml[troubled,]$latitude,
+             popup = hcvHtml[troubled,]$html,
+             color = "Black",
+             group="troubled",
+             radius=7,
+             fillColor = "Black",
+             opacity = 1.0,
+             clusterOptions = markerClusterOptions()
+  ) %>%
+  addCircleMarkers(lng=hcvHtml[!troubled,]$longitude,lat=hcvHtml[!troubled,]$latitude,
+             popup = hcvHtml[!troubled,]$html,
+             color = bgPal(hcvHtml[!troubled,]$logSeverity),
+             group="untroubled",
+             radius=log10(hcvHtml[!troubled,]$violations)+10,
+             fillColor = "Red",
+             opacity = 1.0,
+             clusterOptions = markerClusterOptions()
+  ) %>%
+  addLegend(pal = bgPal,
+            values = quantile(bgHtml$logSeverity),
+            opacity = 0.7,
+            title = "log of Total Severity",
+            position = "bottomright") 
+```
+
+
+```{r}
+
+      
+# generate maps showing properties in each Block Group
+
+genBgMap<-function(df){
+  
+
+  props<-genHtml(df$bg2010)
+  
+  pal<-colorNumeric("Spectral",domain=(props$logSeverity),reverse = TRUE)
+  
+  
+    map<-leaflet(df) %>%
+        addTiles() %>%
+        setView(df$longitude, df$latitude, zoom=14) %>%
+        addPolygons(color="black") %>%
+        addCircleMarkers(lng=props$longitude,lat=props$latitude,
+                         popup = props$html,
+                         opacity = 1.0,
+                         color = pal(props$logSeverity),
+                         radius=log10(props$violations)+10,
+                         clusterOptions = markerClusterOptions()
+        ) %>%
+        addLegend( pal=pal,
+                   opacity = 0.7,
+                   values = quantile(props$logSeverity),
+                   title="Log of Total Severity",
+                   position = "bottomright"
+        )           
+  map                 
+}
+```
+```{r}
+
+bgMap<-list()
+for(i in 1:2)  bgMap[[i]]<- bgDemographics[i,] %>% genBgMap(.)
+
+
+```
+
+
+```{r}
+ggCodePlot<-function(codeSummary,title="Code Summary Severity") {
+   
+   # generate key column for codeReferencesCategoriesSeverity
+#   codeS<- codeSummary %>%
+  codeSummary <- codeSummary %>%
+             mutate(t=if("troubled" %in% names(.)) troubled else "" ) %>%
+             mutate(classYear=paste(violationClass,year,t)) %>%
+             mutate(key=paste(violationClass,violationCategory)) %>%
+             mutate(category=violationCategory) %>%
+             mutate(codeDescr=sprintf("%10.10s %s",codeReference,descr)) %>%
+#            mutate(codeDescr=sprintf("%10.10s %0.30s",codeReference,descr)) %>%
+#             group_by(violationClass,category) %>%
+#              mutate(codesCited=paste(c("",sort(unique(codeDescr)),""),collapse='\n',sep="")) %>%
+             group_by(classYear,key,category,codeDescr) %>%
+               summarise(
+                 sumFreq=sum(freq),
+                 sumSeverity=sum(freq*violationSeverity),
+                 minDaysOpen=min(daysOpenMin),
+                 maxDaysOpen=max(daysOpenMax)
+               ) %>%
+              arrange(sumFreq)
+  
+  
+  codeSummary<- codeSummary %>%
+             ungroup() %>%
+             group_by(classYear,key,category) %>%
+               summarise(
+                 codesCited=paste("\n",sprintf("%6d %s",sumFreq,codeDescr),"",collapse='',sep=""),
+                 sumFreq=sum(sumFreq),
+                 sumSeverity=sum(sumSeverity),
+                 minDaysOpen=min(minDaysOpen),
+                 maxDaysOpen=max(maxDaysOpen),
+               ) %>%
+             ungroup()
+
+   colourCount = length(unique(codeSummary$key))
+   getPalette = colorRampPalette(brewer.pal(9, "Set1"))
+
+   ggCodePlot<- codeSummary %>%
+         mutate(logSeverity=round(log10(sumSeverity),digits=3)) %>%
+         mutate(TotalSeverity=sumSeverity) %>%
+         mutate(Occurences=sumFreq) %>%
+#        mutate(key=sub(".(..)","\\1",as.character(key+100))) %>%
+         mutate(o_="__________________________:_o") %>%
+         arrange(key) %>%
+       ggplot(aes( y=logSeverity,x=classYear,fill=key,
+         labelMark=o_, labelCategory=category,labelsumSeverity=TotalSeverity,
+         label0=Occurences,labelMax=maxDaysOpen,
+         labelMin=minDaysOpen,labelCitations=codesCited
+     ))+
+     geom_bar(stat="identity",color="white",aes())+ #position_dodge(0.9)))+
+   # geom_bar(aes(fill=key,stat="identity",color="white", position="dodge2"))+ #position_dodge(0.9)))+
+     labs(title=title )+
+     ylab("log Total Severity by Category")+
+     theme_economist()+
+     theme(plot.title = element_text(hjust=0,size=10),
+     axis.text.x=element_text(angle=45,vjust = 0.3) ,
+     axis.text.y=element_blank() , legend.position="bottom")+
+   #  axis.text.x=element_text(angle=70,vjust = 0.5, hjust = .2) )+
+   #  scale_fill_brewer(palette = "Spectral")
+   #  scale_fill_manual(values = colorRampPalette(brewer.pal(12, "Spectral"))(colourCount))
+      scale_fill_manual(values = getPalette(colourCount) )
+   
+   ggCodePlot
+}   
+
+ggCodeSummary<-ggCodePlot(codeSummary,
+          title="Severity of Housing Code Violations\nby Class and Year, Color Filled by Category within Class"
+          )
+pltyCodeSummary<-ggplotly(ggCodeSummary)
+
+ggCodeTroubledSummary<-ggCodePlot(codeTroubledSummary,
+          title="Severity of Housing Code Violations for\nTroubled Properties by Class and Year, Color Filled by Category within Class"
+          )
+pltyCodeTroubledSummary<-ggplotly(ggCodeTroubledSummary)
+
+ggCodeCombinedSummary<-ggCodePlot(title = "Severity of Housing Code Violations for\nAll Properties by Class and Year, Color Filled by Category within Class and Staggered by Troubled",
+                                  codeTroubledSummary %>%
+                                    mutate(troubled="t") %>%
+                                    full_join( codeSummary %>%
+                                                 mutate(troubled="")
+                                    )
+)
+
+pltyCodeCombinedSummary<-ggplotly(ggCodeCombinedSummary)
+```
+
+```{r}
+
+# generate wordcloud display of code references and desscriptions weighted by log total severity
+words<- codeSummary %>%
+          group_by(codeReference,descr, violationSeverity) %>%
+          summarise( freq=sum(freq)) %>%
+          ungroup() %>%
+          mutate(freq=round(log10(freq*violationSeverity))) 
+
+words<- words %>%
+          add_row(codeReference=words$descr,freq=words$freq) %>%
+          mutate(word=codeReference) %>%
+          select(word,freq)
+
+codeWordCloud<-wordcloud2::wordcloud2(words,size=.1)
+```
+
+```{r}
+rdt<-function(file="mcHcvVisualizations.Rdata") save(file=file,
+     alluvialBasePlot,
+     alluvialDistDirPlot,
+     alluvialHabitabilityPlot,
+     alluvialSafetyPlot,
+     baseMap,
+     bgDemographics,
+     bgMap,
+     codeReferencesCategoriesSeverity,
+     codeSummary,
+     codeTroubledSummary,
+     codeWordCloud,
+     dataDescriptions,
+     ggCodeSummary,
+     ggCodeTroubledSummary,
+     ggCodeCombinedSummary,
+     hcvHtml,
+     hcvSample,
+     hcvSummary,
+     pltyCodeSummary,
+     pltyCodeTroubledSummary,
+     pltyCodeCombinedSummary,
+     summary311,
+     summaryRentals,
+     tallyBldgs,
+     tallyLandUse,
+     tallyUnits
+)
+
+```
+

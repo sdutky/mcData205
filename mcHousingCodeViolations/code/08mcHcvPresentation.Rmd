@@ -1,0 +1,550 @@
+---
+title: "Visualizations and Analysis of Housing Code Violation\nin Montgomery County, Maryland 2013-2019"
+author: "Steve Dutky Montgomery College"
+date: "2/18/2020"
+output:
+  html_document:
+    fig_width: 6
+    fig_height: 4
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE,error=TRUE,message=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+<style>
+p.caption {
+  font-size: 1.75em;
+  font-style: bold;
+  color: black;
+  margin-right: 10%;
+  margin-left: 10%;  
+  text-align: center;
+}
+</style>
+
+
+```{r RCS,eval=FALSE}
+
+#$Log: 08mcHcvPresentation.Rmd,v $
+#Revision 1.4  2020/05/13 19:33:32  dutky
+#checkpoint, mainly presentational punch list
+#
+#Revision 1.3  2020/05/13 17:34:08  dutky
+#checkpoint
+#
+#Revision 1.2  2020/05/12 20:42:23  dutky
+#checkpoint
+#
+
+#Revision 1.1  2020/05/11 21:12:29  dutky
+#Initial revision
+#
+
+```
+
+
+
+```{r error=FALSE,warning=FALSE,message=FALSE}
+# Load Libaries
+library(plyr) # must be loaded before tidyverse
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(Hmisc)
+library(lubridate)
+library(pander)
+library(ggmap)
+library(sf)
+library(sp)
+library(tidygeocoder)
+library(purrr)
+library(spatial)
+library(ggspatial)
+library(scales)
+library(ggalluvial)
+library(ggthemes)
+library(geosphere)
+library(leaflet)
+library(RColorBrewer)
+library(htmlwidgets)
+library(htmltools)
+```
+
+```{r loadVizData}
+load(url("https://github.com/sdutky/mcData205/raw/master/mcHousingCodeViolations/Rdata/mcHcvVisualizations.Rdata"))
+```
+
+## **Herein:** {#sddSection0}
+*   **[Introduction](#sddSection1)**
+*   **[Principal Data Sources](#sddSection1a)**
+*   **[Some Relevant Statistics](#sddSection1b)**
+*   **[Decoding the Housing Code](#sddSection2)**
+*   **[Decoding the Code, continued](#sddSection3)**
+*   **[Code Violations by Classes and Categories](#sddSection4)**
+*   **[Process and Flow of Housing Code Inspections](#sddSection5)**
+*   **[Process and Flow with Distamce and Bearing](#sddSection6)**
+*   **[Section 7](#sddSection7)**
+*   **[Section 8](#sddSection8)**
+
+```{r ignore1,eval=FALSE}
+
+*   **[Section 9](#sddSection9)**
+*   **[Section 10](#sddSection10)**
+*   **[Section 11](#sddSection11)**
+*   **[Section 12](#sddSection12)**
+*   **[Section 13](#sddSection13)**
+*   **[Section 14](#sddSection14)**
+*   **[Section 15](#sddSection15)**
+*   **[Section 16](#sddSection16)**
+*   **[Section 17](#sddSection17)**
+*   **[Section 18](#sddSection18)**
+*   **[Section 19](#sddSection19)**
+*   **[Section 20](#sddSection20)**
+*   **[Section 21](#sddSection21)**
+*   **[Section 22](#sddSection22)**
+*   **[Section 23](#sddSection23)**
+*   **[Section 24](#sddSection24)**
+*   **[Section 25](#sddSection25)**
+*   **[Section 26](#sddSection26)**
+*   **[Section 27](#sddSection27)**
+*   **[Section 28](#sddSection28)**
+*   **[Section 29](#sddSection29)**
+*   **[Section 30](#sddSection30)**
+*   **[Section 31](#sddSection31)**
+*   **[Section 32](#sddSection32)**
+*   **[Section 33](#sddSection33)**
+*   **[Section 34](#sddSection34)**
+*   **[Section 35](#sddSection35)**
+*   **[Section 36](#sddSection36)**
+*   **[Section 37](#sddSection37)**
+*   **[Section 38](#sddSection38)**
+*   **[Section 39](#sddSection39)**
+*   **[Section 40](#sddSection40)**
+*   **[Section 41](#sddSection41)**
+*   **[Section 42](#sddSection42)**
+*   **[Section 43](#sddSection43)**
+*   **[Section 44](#sddSection44)**
+*   **[Section 45](#sddSection45)**
+*   **[Section 46](#sddSection46)**
+*   **[Section 47](#sddSection47)**
+```
+
+*   **[Section 48](#sddSection48)**
+*   **[Section 49](#sddSection49)**
+*   **[Section 50](#sddSection50)**
+
+******
+
+## **Introduction** {#sddSection1}
+[{previous}](#sddSection0)|[{toc}](#sddSection0)|[{next}](#sddSection1a)
+---------------|------------|----------
+<br>
+
+###  **Housing Code Enforcement: Ensure that rental properties habitable, safe, and secure for tenants** 
+
+###  **Department of Housing and Community Affairs (DHCA) employs nineteen DHCA inspectors**
+
+###  **Disclaimer: I am a retired member of UFCW Local 1994 that represents DHCA.**
+
+###  Rental properties are subject to routine triennial inspection and on change of ownership.**
+
+###  **2016: County expands scope and thrust of housing regulation:**
+*  **Troubled Properties history of violations subject to frequent inspections**
+*  **Owners must submit remediation plans with goals and milestones**
+*  **Emphasis to avoid condemnation proceedings displacing tenants**
+*  **Provides for sampling inspections of multiunit properties.**
+*  **Provides for "blitz" inspections of multiple properties in neighborhood.**
+
+###  **DHCA maintains datasets of housing code violations and troubled properties on Data Montgomery**
+
+<br>
+</center>
+******
+
+
+## **Data Sources** {#sddSection1a}
+[{previous}](#sddSection1)|[{toc}](#sddSection0)|[{next}](#sddSection1b)
+---------------|------------|----------
+
+The [**Maryland Property Data - Parcel Points**](https://data.imap.maryland.gov/datasets/maryland-property-data-parcel-points/data?where=JURSCODE%20%3D%20%27MONT%27), filtered for Montgomery County
+
+>  This describes all 344K properties in Montgomery County.  In addition to property address, it contains key data including geographic location and census block groups that allow it to be joined to both County and U.S. Census data sets. It has interesting items such as property owner; number of dwelling units; and dates of last inspection, sale, and construction.  Indicators of owner occupancy and residential property allow filtering of rental property.
+
+[**Data Montgomery Housing Code Violations**](https://data.montgomerycountymd.gov/Consumer-Housing/Housing-Code-Violations/k9nj-z35d)
+
+>  This contains 470K housing code violations dating from 2013.  It serves as the primary data source for this project.  Although it catalogs only violations, the case number id provides an estimate of total cases including those without infractions. It describes the items in violation, the code citations, corrective actions required and the 311 service complaint. It provides dates of filing, assignment, inspection, correction and closure. 
+
+[**Data Montgomery Troubled Property Analysis**](https://data.montgomerycountymd.gov/Consumer-Housing/Troubled-Properties-Analysis/bw2r-araf)
+
+> This apparently identifies the properties currently subject to more stringent inspections and corrective action plans.  Its case number links back to the Housing Code Violation data set and may be useful to extract other cases with severe violations.
+
+[**U.S. Census 2018 American Community Survey (ACS) extract for Montgomery County Block Groups**](https://data.census.gov/cedsci/table?tid=ACSDT5Y2018.B25032&vintage=2018&layer=blockgroup&t=Owner%2FRenter%20%28Householder%29%20Characteristics&g=0500000US24031.150000&hidePreview=false&cid=B11001A_001E)
+
+>  This data set provides estimates of the number of units in owner and renter occupied properties in each census block in Montgomery County. The estimates are based on data sampled between 2014 and 2018.  
+
+**Other Data Montgomery data sets and text sources to be used in the project include:**
+
+*  To determine the number and position of DHCA code inspectors: Employee Salaries ( [2014](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2014/54rh-89p8), [2015](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2015/6rqk-pdub), [2016](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2016/xj3h-s2i7), [2017](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2017/2qd6-mr43), [2018](https://data.montgomerycountymd.gov/Human-Resources/Employee-Salaries-2018/kdqy-4wzv) ) 
+*  To compare the service requests referred to DHCA to those resulting in cited violations: [MC311 Service Requests](https://data.montgomerycountymd.gov/Government/MC311-Service-Requests/xtyh-brr2/data)
+*  To determine the geographic boundaries of Census Block Groups: [Census Block Groups 2010](https://data.montgomerycountymd.gov/Technology/Census-Block-Groups-2010-geographic-data-/y2z8-tsry)
+*  The [County Code](http://montgomeryco-md.elaws.us/code/coor_ptii), [Housing Code Enforcement Handbook](https://www.montgomerycountymd.gov/DHCA/Resources/Files/community/code/handbook_eng.pdf),and  [Bill 19-15](https://www.montgomerycountymd.gov/COUNCIL/Resources/Files/bill/2015/Packets/20150618_1.pdf)
+
+
+
+## **Some Relevant Statistics** {#sddSection1b}
+[{previous}](#sddSection1a)|[{toc}](#sddSection0)|[{next}](#sddSection2)
+---------------|------------|----------
+<br>
+
+
+<br><center> **Summary of Residential Rental Properties in Montgomery County**
+
+```{r}
+
+pander(summaryRentals)
+#html(file=FALSE,summaryRentals)
+
+```
+<br>  **Summary of Housing Code Violations 2013-2019**
+
+```{r}
+
+pander(summary311)
+#html(file=FALSE,summary311)
+
+```
+
+<br><br<br<br<br<br>
+
+## **Decoding the Housing Code** {#sddSection2}
+[{previous}](#sddSection1b)|[{toc}](#sddSection0)|[{next}](#sddSection3)
+---------------|------------|----------
+<br>
+
+```{r codeWordcloud,fig.align='center',fig.dim=c(8,6),fig.cap="fig 1 Word Cloud of Code Citations and Descriptions\nSized by Frequency of Occurence"}
+codeWordCloud
+
+```
+
+<br><br>
+
+## **Decoding the Code, continued** {#sddSection3}
+[{previous}](#sddSection2)|[{toc}](#sddSection0)|[{next}](#sddSection4)
+---------------|------------|----------
+<br>
+
+###  **There are 66 distinct code citations in the Housing Code Violation dataset**
+
+```{r results='asis'}
+html(file=FALSE,head(codeReferencesCategoriesSeverity$codeReference))
+```
+
+###  **Generate a condensed description from the County Code:**
+
+```{r results='asis'}
+html(file=FALSE,head(codeReferencesCategoriesSeverity[,c("codeReference","descr")]))
+```
+
+###  **From the descriptions, rank the violation severity (1-5)**
+
+```{r results='asis'}
+html(file=FALSE,head(codeReferencesCategoriesSeverity[,c("codeReference","descr","violationSeverity")]))
+```
+
+###  **Again, from the descriptions, group the violations into categories:**
+
+```{r}
+a<-sort(unique(codeReferencesCategoriesSeverity$violationCategory)) 
+l<-length(a)
+if (l%%2) { l<-l+1 ; a[l]<-""}
+a<-data.frame(list(a[1:(l/2)],a[(l/2+1):l]))
+html(file=FALSE,t(a))
+```
+
+###  **Then,  group the categories into classes:**
+
+```{r results='asis'}
+a<-sort(unique(codeReferencesCategoriesSeverity$violationClass)) 
+l<-length(a)
+if (l%%2) { l<-l+1 ; a[l]<-""}
+a<-data.frame(list(a[1:(l/2)],a[(l/2+1):l]))
+html(file=FALSE,t(a))
+```
+
+<br><br><br>
+## **Code Violations by Classes and Categories** {#sddSection4}
+[{previous}](#sddSection3)|[{toc}](#sddSection0)|[{next}](#sddSection5)
+---------------|------------|----------
+<br>
+
+```{r pltyCodeSummary,results="asis", fig.cap="fig 2 Summaries of Code Violations by Classes and Categories 2013-2019"}
+
+tmpFile<-sub("^/tmp/[^/]*/(.*)$","\\1.html",tempfile())
+saveWidget( pltyCodeSummary, tmpFile)
+print( tags$iframe(src=tmpFile, width=1280, height=960) )
+
+```
+
+<br>
+
+
+## **Process and Flow of Housing Code Inspections** {#sddSection5}
+[{previous}](#sddSection4)|[{toc}](#sddSection0)|[{next}](#sddSection6)
+---------------|------------|----------
+<br>
+
+```{r alluvialBase,fig.align='center',fig.width=8,fig.height=6,fig.cap="fig 3 Alluvial Base Plot of Enforcement Flows"}
+
+alluvialBasePlot
+```
+
+## **Process and Flow with Distance and Bearing** {#sddSection6}
+[{previous}](#sddSection5)|[{toc}](#sddSection0)|[{next}](#sddSection7)
+---------------|------------|----------
+<br>
+
+```{r alluvialDistanceDirection,fig.align='center',fig.dim=c(8,6),fig.cap="fig 4 Alluvial Plot of Distance/Direction to Property"}
+alluvialDistDirPlot
+```
+
+## **Mapping Housing Code Violations** {#sddSection7}
+[{previous}](#sddSection6)|[{toc}](#sddSection0)|[{next}](#sddSection8)
+---------------|------------|----------
+<br>
+
+```{r baseMap,results="asis", fig.cap="fig 5 Leaflet Map of County Summarizing Violations\nby Census Block Groups, Properties, and Troubled Properties"}
+
+tmpFile<-sub("^/tmp/[^/]*/(.*)$","\\1.html",tempfile())
+saveWidget( baseMap, tmpFile, title="fig 5 Map of Properties and Troubled Properties in Census Block Groups")
+print( tags$iframe(src=tmpFile, width=1280, height=960) )
+
+```
+
+## **A Look at Troubled Properties** {#sddSection8}
+[{previous}](#sddSection7)|[{toc}](#sddSection0)|[{next}](#sddSection9)
+---------------|------------|----------
+<br>
+
+```{r pltyTroubledCodeSummary,results="asis", fig.cap="fig 2 Summaries of Code Violations by Classes and Categories for Troubled Properties 2013-2019"}
+
+tmpFile<-sub("^/tmp/[^/]*/(.*)$","\\1.html",tempfile())
+saveWidget( pltyCodeCombinedSummary, tmpFile, title =  "fig 6 Summaries of Code Violations by Classes and Categories for Troubled Properties 2013-2019")
+print( tags$iframe(src=tmpFile, width=1280, height=960) )
+
+```
+
+```{r ignore2,eval=FALSE}
+
+
+
+## **Section 9** {#sddSection9}
+[{previous}](#sddSection8)|[{toc}](#sddSection0)|[{next}](#sddSection10)
+---------------|------------|----------
+<br>
+
+## **Section 10** {#sddSection10}
+{previous}](#sddSection9)|[{toc}](#sddSection0)|[{next}](#sddSection11)
+---------------|------------|----------
+<br>
+
+## **Section 11** {#sddSection11}
+[{previous}](#sddSection10)|[{toc}](#sddSection0)|[{next}](#sddSection12)
+---------------|------------|----------
+<br>
+
+## **Section 12** {#sddSection12}
+[{previous}](#sddSection11)|[{toc}](#sddSection0)|[{next}](#sddSection13)
+---------------|------------|----------
+<br>
+
+## **Section 13** {#sddSection13}
+[{previous}](#sddSection12)|[{toc}](#sddSection0)|[{next}](#sddSection14)
+---------------|------------|----------
+<br>
+
+## **Section 14** {#sddSection14}
+[{previous}](#sddSection13)|[{toc}](#sddSection0)|[{next}](#sddSection15)
+---------------|------------|----------
+<br>
+
+## **Section 15** {#sddSection15}
+[{previous}](#sddSection14)|[{toc}](#sddSection0)|[{next}](#sddSection16)
+---------------|------------|----------
+<br>
+
+## **Section 16** {#sddSection16}
+[{previous}](#sddSection15)|[{toc}](#sddSection0)|[{next}](#sddSection17)
+---------------|------------|----------
+<br>
+
+## **Section 17** {#sddSection17}
+[{previous}](#sddSection16)|[{toc}](#sddSection0)|[{next}](#sddSection18)
+---------------|------------|----------
+<br>
+
+## **Section 18** {#sddSection18}
+[{previous}](#sddSection17)|[{toc}](#sddSection0)|[{next}](#sddSection19)
+---------------|------------|----------
+<br>
+
+## **Section 19** {#sddSection19}
+[{previous}](#sddSection18)|[{toc}](#sddSection0)|[{next}](#sddSection20)
+---------------|------------|----------
+<br>
+
+## **Section 20** {#sddSection20}
+[{previous}](#sddSection19)|[{toc}](#sddSection0)|[{next}](#sddSection21)
+---------------|------------|----------
+<br>
+
+## **Section 21** {#sddSection21}
+[{previous}](#sddSection20)|[{toc}](#sddSection0)|[{next}](#sddSection22)
+---------------|------------|----------
+<br>
+
+## **Section 22** {#sddSection22}
+[{previous}](#sddSection21)|[{toc}](#sddSection0)|[{next}](#sddSection23)
+---------------|------------|----------
+<br>
+
+## **Section 23** {#sddSection23}
+[{previous}](#sddSection22)|[{toc}](#sddSection0)|[{next}](#sddSection24)
+---------------|------------|----------
+<br>
+
+## **Section 24** {#sddSection24}
+[{previous}](#sddSection23)|[{toc}](#sddSection0)|[{next}](#sddSection25)
+---------------|------------|----------
+<br>
+
+## **Section 25** {#sddSection25}
+[{previous}](#sddSection24)|[{toc}](#sddSection0)|[{next}](#sddSection26)
+---------------|------------|----------
+<br>
+
+## **Section 26** {#sddSection26}
+[{previous}](#sddSection25)|[{toc}](#sddSection0)|[{next}](#sddSection27)
+---------------|------------|----------
+<br>
+
+## **Section 27** {#sddSection27}
+[{previous}](#sddSection26)|[{toc}](#sddSection0)|[{next}](#sddSection28)
+---------------|------------|----------
+<br>
+
+## **Section 28** {#sddSection28}
+[{previous}](#sddSection27)|[{toc}](#sddSection0)|[{next}](#sddSection29)
+---------------|------------|----------
+<br>
+
+## **Section 29** {#sddSection29}
+[{previous}](#sddSection28)|[{toc}](#sddSection0)|[{next}](#sddSection30)
+---------------|------------|----------
+<br>
+
+## **Section 30** {#sddSection30}
+[{previous}](#sddSection29)|[{toc}](#sddSection0)|[{next}](#sddSection31)
+---------------|------------|----------
+<br>
+
+## **Section 31** {#sddSection31}
+[{previous}](#sddSection30)|[{toc}](#sddSection0)|[{next}](#sddSection32)
+---------------|------------|----------
+<br>
+
+## **Section 32** {#sddSection32}
+[{previous}](#sddSection31)|[{toc}](#sddSection0)|[{next}](#sddSection33)
+---------------|------------|----------
+<br>
+
+## **Section 33** {#sddSection33}
+[{previous}](#sddSection32)|[{toc}](#sddSection0)|[{next}](#sddSection34)
+---------------|------------|----------
+<br>
+
+## **Section 34** {#sddSection34}
+[{previous}](#sddSection33)|[{toc}](#sddSection0)|[{next}](#sddSection35)
+---------------|------------|----------
+<br>
+
+## **Section 35** {#sddSection35}
+[{previous}](#sddSection34)|[{toc}](#sddSection0)|[{next}](#sddSection36)
+---------------|------------|----------
+<br>
+
+## **Section 36** {#sddSection36}
+[{previous}](#sddSection35)|[{toc}](#sddSection0)|[{next}](#sddSection37)
+---------------|------------|----------
+<br>
+
+## **Section 37** {#sddSection37}
+[{previous}](#sddSection36)|[{toc}](#sddSection0)|[{next}](#sddSection38)
+---------------|------------|----------
+<br>
+
+## **Section 38** {#sddSection38}
+[{previous}](#sddSection37)|[{toc}](#sddSection0)|[{next}](#sddSection39)
+---------------|------------|----------
+<br>
+
+## **Section 39** {#sddSection39}
+[{previous}](#sddSection38)|[{toc}](#sddSection0)|[{next}](#sddSection40)
+---------------|------------|----------
+<br>
+
+## **Section 40** {#sddSection40}
+[{previous}](#sddSection39)|[{toc}](#sddSection0)|[{next}](#sddSection41)
+---------------|------------|----------
+<br>
+
+## **Section 41** {#sddSection41}
+[{previous}](#sddSection40)|[{toc}](#sddSection0)|[{next}](#sddSection42)
+---------------|------------|----------
+<br>
+
+## **Section 42** {#sddSection42}
+[{previous}](#sddSection41)|[{toc}](#sddSection0)|[{next}](#sddSection43)
+---------------|------------|----------
+<br>
+
+## **Section 43** {#sddSection43}
+[{previous}](#sddSection42)|[{toc}](#sddSection0)|[{next}](#sddSection44)
+---------------|------------|----------
+<br>
+
+## **Section 44** {#sddSection44}
+[{previous}](#sddSection43)|[{toc}](#sddSection0)|[{next}](#sddSection45)
+---------------|------------|----------
+<br>
+
+## **Section 45** {#sddSection45}
+[{previous}](#sddSection44)|[{toc}](#sddSection0)|[{next}](#sddSection46)
+---------------|------------|----------
+<br>
+
+## **Section 46** {#sddSection46}
+[{previous}](#sddSection45)|[{toc}](#sddSection0)|[{next}](#sddSection47)
+---------------|------------|----------
+<br>
+
+## **Section 47** {#sddSection47}
+[{previous}](#sddSection46)|[{toc}](#sddSection0)|[{next}](#sddSection48)
+---------------|------------|----------
+<br>
+
+```
+
+## **Section 48** {#sddSection48}
+[{previous}](#sddSection47)|[{toc}](#sddSection0)|[{next}](#sddSection49)
+---------------|------------|----------
+<br>
+
+## **Section 49** {#sddSection49}
+[{previous}](#sddSection48)|[{toc}](#sddSection0)|[{next}](#sddSection50)
+---------------|------------|----------
+<br>
+
+## **Section 50** {#sddSection50}
+[{previous}](#sddSection49)|[{toc}](#sddSection0)|
+--------
