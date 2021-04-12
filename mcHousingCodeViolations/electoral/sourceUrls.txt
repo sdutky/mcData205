@@ -1,0 +1,2 @@
+https://data2018-mcgov-gis.opendata.arcgis.com/datasets/councilmanic-districts
+https://data2018-mcgov-gis.opendata.arcgis.com/datasets/election-precincts
